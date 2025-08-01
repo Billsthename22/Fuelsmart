@@ -4,10 +4,10 @@ import Image from 'next/image';
 import Navbar from './components/Navbar';
 import Cards from './components/Cards'
 import Faq from './components/faq'
+
 export default function Home() {
   return (
     <main className="bg-[#0D1B2A] text-white min-h-screen">
-
       {/* NAVBAR */}
      <Navbar/>
       {/* HERO SECTION */}
@@ -37,11 +37,11 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* OVERLAP CARDS SECTION */}
       <Cards/>
  {/* HOW IT WORKS */}
-<section className="bg-white text-black py-20 px-6">
+ 
+ <section className="bg-white text-black py-12 px-6">
   <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
   <div className="flex flex-wrap justify-center gap-10 max-w-5xl mx-auto">
     {[
@@ -75,7 +75,6 @@ export default function Home() {
     </div>
   </div>
 </section>
-
 {/* NEWSLETTER SIGNUP */}
 <section className="bg-green-50 py-20 text-black px-6">
   <div className="max-w-xl mx-auto text-center">
@@ -93,7 +92,6 @@ export default function Home() {
     </form>
   </div>
 </section>
-
 {/* FAQ */}
 <Faq/>
       {/* FOOTER */}

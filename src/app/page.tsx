@@ -1,103 +1,115 @@
-import Image from "next/image";
+'use client'; 
 
+import Image from 'next/image';
+import Navbar from './components/Navbar';
+import Cards from './components/Cards'
+import Faq from './components/faq'
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="bg-[#0D1B2A] text-white min-h-screen">
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* NAVBAR */}
+     <Navbar/>
+      {/* HERO SECTION */}
+      <section className="px-6 py-16">
+        <div className="flex flex-col md:flex-row items-center justify-between max-w-6xl mx-auto gap-10">
+          {/* Left Side */}
+          <div className="text-center md:text-left md:w-1/2">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Find the Cheapest Fuel Around You
+            </h1>
+            <p className="text-lg text-blue-100 mb-8">
+              Compare prices, avoid long queues, save fuel.
+            </p>
+            <div className="flex justify-center md:justify-start gap-4 mb-10 flex-wrap">
+              <button className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-semibold">
+                Use My Location
+              </button>
+              <button className="border border-white px-6 py-3 rounded font-semibold hover:bg-white hover:text-[#153146] transition">
+                Search Area
+              </button>
+            </div>
+          </div>
+
+          {/* Right Side: Image */}
+          <div className="md:w-1/2 flex justify-center md:justify-end">
+            <Image src="/fuuelmaoicon.png" alt="Map icon" width={300} height={300} />
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      {/* OVERLAP CARDS SECTION */}
+      <Cards/>
+ {/* HOW IT WORKS */}
+<section className="bg-white text-black py-20 px-6">
+  <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
+  <div className="flex flex-wrap justify-center gap-10 max-w-5xl mx-auto">
+    {[
+      { icon: '📍', label: 'Enable Location' },
+      { icon: '🗺️', label: 'View Nearby Stations' },
+      { icon: '💰', label: 'Save on Fuel' },
+    ].map((item, idx) => (
+      <div key={idx} className="flex flex-col items-center text-center transition-transform duration-300 hover:scale-105">
+        <span className="text-5xl">{item.icon}</span>
+        <p className="mt-4 text-lg font-semibold">{item.label}</p>
+      </div>
+    ))}
+  </div>
+</section>
+
+{/* TESTIMONIALS */}
+<section className="bg-[#f9fafb] py-20 text-black px-6">
+  <div className="max-w-6xl mx-auto text-center">
+    <h2 className="text-3xl font-bold mb-12">What People Are Saying</h2>
+    <div className="grid md:grid-cols-3 gap-8">
+      {[
+        { quote: 'FuelSmart helped me find fuel stations with zero queues. Life saver!', name: 'Amina, Lagos' },
+        { quote: 'The accuracy of pricing is insane. I rely on it daily.', name: 'Tobi, Abuja' },
+        { quote: 'Clean design, easy to use, and always up to date.', name: 'Chuka, PH' },
+      ].map((item, idx) => (
+        <div key={idx} className="bg-white p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition">
+          <p className="italic text-gray-700">“{item.quote}”</p>
+          <p className="mt-4 font-semibold text-green-700">{item.name}</p>
+        </div>
+      ))}
     </div>
+  </div>
+</section>
+
+{/* NEWSLETTER SIGNUP */}
+<section className="bg-green-50 py-20 text-black px-6">
+  <div className="max-w-xl mx-auto text-center">
+    <h3 className="text-2xl font-bold mb-4">Stay Updated with Fuel Prices</h3>
+    <p className="text-gray-600 mb-6">Sign up to get real-time fuel updates delivered to your inbox.</p>
+    <form className="flex flex-col sm:flex-row gap-4 justify-center">
+      <input
+        type="email"
+        placeholder="Enter your email"
+        className="p-3 border border-gray-300 rounded w-full sm:w-auto flex-1 focus:outline-none focus:ring-2 focus:ring-green-500"
+      />
+      <button className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 transition">
+        Subscribe
+      </button>
+    </form>
+  </div>
+</section>
+
+{/* FAQ */}
+<Faq/>
+      {/* FOOTER */}
+      <footer className="bg-gray-900 text-white py-8">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+          <div className="mb-4 md:mb-0">
+            <h3 className="text-lg font-bold">FuelSmart Naija</h3>
+            <p className="text-sm text-gray-400">©️ {new Date().getFullYear()} All rights reserved</p>
+          </div>
+          <div className="flex space-x-6 text-sm">
+            <a href="#" className="hover:underline">Privacy</a>
+            <a href="#" className="hover:underline">Terms</a>
+            <a href="#" className="hover:underline">Contact</a>
+          </div>
+        </div>
+      </footer>
+    </main>
   );
 }

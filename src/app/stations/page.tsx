@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import Sidebar from '@/app/components/Sidebar';
 import carData from '@/data/car_brands_models.json';
+import Script from 'next/script';
 
 const stations = [
   'NNPC', 'Total', 'TotalEnergies', 'Oando', 'MRS', 'Conoil',
@@ -99,6 +100,13 @@ export default function FuelMapPage() {
   }, [selectedStation]);
 
   return (
+   <>
+       {/* Google Maps Script */}
+       <Script
+       src={`https://maps.googleapis.com/maps/api/js?key=AIzaSyCkn0gH1dQIRF0gcYgm6v-5ULaSV7WbtIg&libraries=places`}
+       strategy="beforeInteractive"
+     />
+
     <div className="flex h-screen font-sans">
       <Sidebar
         brands={brands}
@@ -114,6 +122,6 @@ export default function FuelMapPage() {
       <main className="flex-1 relative">
         <div ref={mapRef} className="w-full h-full" />
       </main>
-    </div>
+    </div></>
   );
 }

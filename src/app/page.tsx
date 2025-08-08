@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import Cards from './components/Cards';
 import Faq from './components/faq';
 import { MapPin, Map, Fuel } from 'lucide-react';
+import Link from 'next/link';
 
 const containerVariants = {
   hidden: { opacity: 0, y: 40 },
@@ -58,12 +59,40 @@ export default function Home() {
               variants={itemVariants}
               className="flex justify-center md:justify-start gap-4 mb-10 flex-wrap"
             >
-              <button className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md">
-                Use My Location
-              </button>
-              <button className="border border-white px-6 py-3 rounded-xl font-semibold hover:bg-white hover:text-[#153146] transition shadow-md">
-                Search Area
-              </button>
+             <button
+  onClick={() => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        alert(`Latitude: ${latitude}, Longitude: ${longitude}`);
+
+        // Optional: redirect or trigger map rendering here
+        // e.g. router.push(`/map?lat=${latitude}&lng=${longitude}`)
+      },
+      (error) => {
+        alert('Unable to retrieve your location.');
+        console.error(error);
+      }
+    );
+  }}
+  className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md"
+>
+  Use My Location
+</button>
+
+
+<Link href="/stations?search=true">
+  <button className="border border-white px-6 py-3 rounded-xl font-semibold hover:bg-white hover:text-[#153146] transition shadow-md">
+    Search Area
+  </button>
+</Link>
+
+
             </motion.div>
           </motion.div>
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Upload, Fuel } from "lucide-react";
 import Navbar from "../components/Navbar";
-import { fuelStations } from "@/app/stationData"; // ✅ Import JSON
+import { fuelStations } from "@/app/stationData"; // Import JSON
 
 export default function ReportPage() {
   const [station, setStation] = useState("");

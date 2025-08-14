@@ -263,7 +263,7 @@ export default function FuelMapPage() {
         models={models}
         stations={stations.map((s) => s.name)} // Sidebar only needs names
         selectedBrand={selectedBrand}
-        setSelectedBran d={setSelectedBrand}
+        setSelectedBrand={setSelectedBrand}
         selectedModel={selectedModel}
         setSelectedModel={setSelectedModel}
         selectedStation={selectedStation}

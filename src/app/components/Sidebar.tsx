@@ -11,8 +11,8 @@ interface SidebarProps {
   selectedStation: string;
   setSelectedStation: (value: string) => void;
   brands: string[];
-  selectedBrand: Brand | "";
-  setSelectedBrand: React.Dispatch<React.SetStateAction<Brand | "">>;
+  selectedBrand: string;
+  setSelectedBrand: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export default function Sidebar({

@@ -349,7 +349,7 @@ export default function FuelMapPage() {
             <ul>
               {results.map((r, i) => (
                 <li
-                  key={`${r.position.lat},${r.position.lng}`}
+                  key={r.placeId || `${r.position.lat},${r.position.lng}-${i}`}
                   className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${activeIdx === i ? 'bg-blue-50' : ''}`}
                   onClick={() => routeTo(r, i)}
                 >

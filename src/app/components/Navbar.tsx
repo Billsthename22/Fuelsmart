@@ -20,7 +20,7 @@ export default function Navbar() {
           <Link href="/stations" className="hover:text-green-400 transition-colors">Stations</Link>
         </li>
         <li>
-          <Link href="/report" className="hover:text-green-400 transition-colors">Report</Link>
+          <Link href="/Report" className="hover:text-green-400 transition-colors">Report</Link>
         </li>
         <li>
           <Link href="/compare" className="hover:text-green-400 transition-colors">Compare</Link>

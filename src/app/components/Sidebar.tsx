@@ -5,13 +5,15 @@ import { useEffect } from 'react';
 interface SidebarProps {
   brands: string[];
   models: string[];
-  stations: string[];
+  stations: string[];  // array of station names as strings
   selectedBrand: string;
-  setSelectedBrand: (value: string) => void;
+  setSelectedBrand: React.Dispatch<React.SetStateAction<Brand | "">>;
   selectedModel: string;
   setSelectedModel: (value: string) => void;
   selectedStation: string;
   setSelectedStation: (value: string) => void;
+  locationValue: string;
+  setLocationValue: (value: string) => void;
 }
 
 export default function Sidebar({
@@ -24,6 +26,8 @@ export default function Sidebar({
   setSelectedModel,
   selectedStation,
   setSelectedStation,
+  locationValue,
+  setLocationValue,
 }: SidebarProps) {
   useEffect(() => {
     const input = document.getElementById("areaSearch") as HTMLInputElement;
@@ -44,11 +48,12 @@ export default function Sidebar({
         const lng = location.lng();
         console.log("Selected Area:", place.name, lat, lng);
 
-        // 🚀 Optional next step: update a map or fetch stations with lat/lng
-        // e.g. setCoordinates({ lat, lng }); or center map, etc.
+        if (place.name) {
+          setLocationValue(place.name);
+        }
       }
     });
-  }, []);
+  }, [setLocationValue]);
 
   return (
     <aside className="w-[300px] bg-[#102542] text-white p-4 space-y-6">
@@ -99,8 +104,8 @@ export default function Sidebar({
           className="w-full p-2 text-black rounded"
         >
           <option value="">-- Choose Station --</option>
-          {stations.map((station) => (
-            <option key={station} value={station}>
+          {stations.map((station, index) => (
+            <option key={`${station}-${index}`} value={station}>
               {station}
             </option>
           ))}
@@ -114,6 +119,8 @@ export default function Sidebar({
           id="areaSearch"
           type="text"
           placeholder="Search Lagos Area (e.g., Lekki)"
+          value={locationValue}
+          onChange={(e) => setLocationValue(e.target.value)}
           className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
         />
       </div>

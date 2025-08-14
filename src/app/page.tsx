@@ -27,6 +27,43 @@ const itemVariants = {
 };
 
 export default function Home() {
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          // Reverse geocode to get a readable location name
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await res.json();
+          const locationName =
+            data.address?.suburb ||
+            data.address?.neighbourhood ||
+            data.address?.city ||
+            data.address?.town ||
+            'Your Area';
+
+          // Redirect to stations page with location in query params
+          window.location.href = `/stations?location=${encodeURIComponent(locationName)}`;
+        } catch (err) {
+          console.error(err);
+          alert('Could not determine your location name.');
+        }
+      },
+      (error) => {
+        alert('Unable to retrieve your location.');
+        console.error(error);
+      }
+    );
+  };
+
   return (
     <main className="bg-[#0D1B2A] text-white min-h-screen">
       {/* NAVBAR */}
@@ -59,40 +96,18 @@ export default function Home() {
               variants={itemVariants}
               className="flex justify-center md:justify-start gap-4 mb-10 flex-wrap"
             >
-             <button
-  onClick={() => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
+              <button
+                onClick={handleUseMyLocation}
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md"
+              >
+                Use My Location
+              </button>
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        alert(`Latitude: ${latitude}, Longitude: ${longitude}`);
-
-        // Optional: redirect or trigger map rendering here
-        // e.g. router.push(`/map?lat=${latitude}&lng=${longitude}`)
-      },
-      (error) => {
-        alert('Unable to retrieve your location.');
-        console.error(error);
-      }
-    );
-  }}
-  className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md"
->
-  Use My Location
-</button>
-
-
-<Link href="/stations?search=true">
-  <button className="border border-white px-6 py-3 rounded-xl font-semibold hover:bg-white hover:text-[#153146] transition shadow-md">
-    Search Area
-  </button>
-</Link>
-
-
+              <Link href="/stations?search=true">
+                <button className="border border-white px-6 py-3 rounded-xl font-semibold hover:bg-white hover:text-[#153146] transition shadow-md">
+                  Search Area
+                </button>
+              </Link>
             </motion.div>
           </motion.div>
 

@@ -3,15 +3,16 @@
 import { useEffect } from 'react';
 
 interface SidebarProps {
-  brands: string[];
+
   models: string[];
   stations: string[];
-  selectedBrand: string;
-  setSelectedBrand: (value: string) => void;
   selectedModel: string;
   setSelectedModel: (value: string) => void;
   selectedStation: string;
   setSelectedStation: (value: string) => void;
+  brands: string[];
+  selectedBrand: string;
+  setSelectedBrand: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export default function Sidebar({

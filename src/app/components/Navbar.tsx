@@ -26,7 +26,7 @@ export default function Navbar() {
           <Link href="/compare" className="hover:text-green-400 transition-colors">Compare</Link>
         </li>
         <li>
-          <Link href="/trends" className="hover:text-green-400 transition-colors">Trends</Link>
+          <Link href="/Trends" className="hover:text-green-400 transition-colors">Trends</Link>
         </li>
       </ul>
 

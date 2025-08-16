@@ -2,6 +2,14 @@
 
 import { useEffect } from 'react';
 
+// Extend the Window interface to include google
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
+
+
 interface SidebarProps {
 
   models: string[];
@@ -27,28 +35,44 @@ export default function Sidebar({
   setSelectedStation,
 }: SidebarProps) {
   useEffect(() => {
-    const input = document.getElementById("areaSearch") as HTMLInputElement;
+    const initializeAutocomplete = () => {
+      const input = document.getElementById("areaSearch") as HTMLInputElement;
 
-    if (!input || !window.google) return;
+      if (!input) return;
 
-    const autocomplete = new google.maps.places.Autocomplete(input, {
-      types: ["(regions)"],
-      componentRestrictions: { country: "ng" },
-    });
-
-    autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
-      const location = place.geometry?.location;
-
-      if (location) {
-        const lat = location.lat();
-        const lng = location.lng();
-        console.log("Selected Area:", place.name, lat, lng);
-
-        // 🚀 Optional next step: update a map or fetch stations with lat/lng
-        // e.g. setCoordinates({ lat, lng }); or center map, etc.
+      // Check if Google Maps and Places API are loaded
+      if (!window.google || !window.google.maps || !window.google.maps.places) {
+        console.log('Google Maps Places API not loaded yet, retrying...');
+        setTimeout(initializeAutocomplete, 1000);
+        return;
       }
-    });
+
+      try {
+        const autocomplete = new google.maps.places.Autocomplete(input, {
+          types: ["(regions)"],
+          componentRestrictions: { country: "ng" },
+        });
+
+        autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          const location = place.geometry?.location;
+
+          if (location) {
+            const lat = location.lat();
+            const lng = location.lng();
+            console.log("Selected Area:", place.name, lat, lng);
+
+            // 🚀 Optional next step: update a map or fetch stations with lat/lng
+            // e.g. setCoordinates({ lat, lng }); or center map, etc.
+          }
+        });
+      } catch (error) {
+        console.error('Error initializing Google Places Autocomplete:', error);
+      }
+    };
+
+    // Start trying to initialize autocomplete
+    initializeAutocomplete();
   }, []);
 
   return (

@@ -47,7 +47,7 @@ export default function FuelMapPage() {
     const loader = new Loader({
       apiKey: API_KEY,
       version: 'weekly',
-      libraries: ['marker'],
+      libraries: ['marker', 'places'],
     })
     loader.load().then(() => {
       if (!mapRef.current) return

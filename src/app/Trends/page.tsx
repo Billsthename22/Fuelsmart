@@ -1,5 +1,5 @@
 "use client";
-
+import Navbar from "../components/Navbar";
 import { useState, useEffect } from "react";
 import { Line } from "react-chartjs-2";
 import {
@@ -86,7 +86,9 @@ export default function TrendsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+   <>
+   <Navbar/>
+   <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto px-4 py-10">
         <h1 className="text-3xl font-bold mb-6 text-center">Fuel Price Trends</h1>
 
@@ -132,5 +134,6 @@ export default function TrendsPage() {
         </div>
       </div>
     </div>
+   </>
   );
 }

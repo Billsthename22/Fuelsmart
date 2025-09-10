@@ -138,7 +138,6 @@ export default function FuelMapPage() {
       }
       return
     }
-
     const dirSvc = new google.maps.DirectionsService()
     const req: google.maps.DirectionsRequest = {
       origin: userPos,

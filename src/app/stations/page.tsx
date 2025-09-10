@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader } from '@googlemaps/js-api-loader'
 import Sidebar from '@/app/components/Sidebar'
 import carData from '@/data/car_brands_models.json'
-
+import Navbar from '../components/Navbar'
 const stations = [
   'NNPC','Total','TotalEnergies','Oando','MRS','Conoil',
   'Enyo','Ardova','Mobil','Rainoil','Eterna','NorthWest Petroleum',
@@ -236,11 +236,11 @@ export default function FuelMapPage() {
             map,
             position: pos,
             title: p.displayName?.text || `${brand} Station ${i + 1}`,
-          })
+          })  
           marker.addListener('gmp-click', () => {
             const idx = items.findIndex(it => it.marker === marker)
             if (idx >= 0) routeTo(items[idx], idx)
-          })
+          })      
           items.push({
             name: p.displayName?.text || brand,
             address: p.formattedAddress,
@@ -313,7 +313,9 @@ export default function FuelMapPage() {
   }
 
   return (
-    <div className="flex h-screen font-sans">
+  <>
+  <Navbar/>
+  <div className="flex h-screen font-sans">
       <Sidebar
         brands={brands}
         models={models}
@@ -366,5 +368,6 @@ export default function FuelMapPage() {
         <div ref={mapRef} className="w-full h-full" />
       </main>
     </div>
+  </>
   )
 }

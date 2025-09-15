@@ -1,8 +1,8 @@
 // app/page.tsx (Next.js App Router)
 "use client";
-
 import { useState } from "react";
 import { User, Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   LineChart,
   Line,
@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import StatsCard from "../components/StatsCard";
+
 // Dummy data for trends
 const trendData = [
   { date: "Aug 1", price: 700 },
@@ -60,6 +61,7 @@ function ViewTrendsCard() {
 }
 
 export default function Dashboard() {
+  const router = useRouter(); // ✅ must be inside the component
   const username = "Emioluwa"; // Later, fetch from session/auth
   const [isOpen, setIsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -120,7 +122,10 @@ export default function Dashboard() {
                       </li>
                     ))}
                   </ul>
-                  <button className="w-full mt-2 text-sm text-blue-400 hover:underline">
+                  <button
+                    onClick={() => router.push("/Notifications")}
+                    className="w-full mt-2 text-sm text-blue-400 hover:underline"
+                  >
                     View all
                   </button>
                 </div>
@@ -169,11 +174,11 @@ export default function Dashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-6 mb-8">
-  <StatsCard label="Nearby Stations Found" value={23} />
-  <StatsCard label="Lowest Price Reported" value="$3.59" />
-  <StatsCard label="Reports Submitted" value={114} />
-  <StatsCard label="Stations Saved" value={8} />
-</div>
+          <StatsCard label="Nearby Stations Found" value={23} />
+          <StatsCard label="Lowest Price Reported" value="$3.59" />
+          <StatsCard label="Reports Submitted" value={114} />
+          <StatsCard label="Stations Saved" value={8} />
+        </div>
 
         {/* Lower Grid */}
         <div className="grid grid-cols-3 gap-6">
@@ -231,14 +236,15 @@ export default function Dashboard() {
 
             {/* Offline Mode */}
             <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2">Offline Mode</h3>
-              <p className="text-gray-400 text-sm mb-4">
-                No sync needed, Cached data available
-                <br />
-                Last sync: 2/14/2024, 10:59 AM
-              </p>
-              <button className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded-lg font-medium">
-                Sync Now
+              <h3 className="text-lg font-semibold mb-2 text-white">
+                Notifications
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">No New Notifications</p>
+              <button
+                onClick={() => router.push("/Notifications")}
+                className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded-lg font-medium text-white"
+              >
+                Open Notifications
               </button>
             </div>
           </div>

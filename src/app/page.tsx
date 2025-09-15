@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -60,7 +60,6 @@ export default function Home() {
       (error) => {
         alert('Unable to retrieve your location.');
         console.error(error);
-        
       }
     );
   };
@@ -97,6 +96,7 @@ export default function Home() {
               variants={itemVariants}
               className="flex justify-center md:justify-start gap-4 mb-10 flex-wrap"
             >
+              {/* Use My Location → Signup */}
               <button
                 onClick={handleUseMyLocation}
                 className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md"
@@ -104,7 +104,8 @@ export default function Home() {
                 Use My Location
               </button>
 
-              <Link href="/stations?search=true">
+              {/* Search Area → Signup */}
+              <Link href="/Signup">
                 <button className="border border-white px-6 py-3 rounded-xl font-semibold hover:bg-white hover:text-[#153146] transition shadow-md">
                   Search Area
                 </button>

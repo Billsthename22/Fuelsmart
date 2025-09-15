@@ -60,6 +60,7 @@ export default function Home() {
       (error) => {
         alert('Unable to retrieve your location.');
         console.error(error);
+        
       }
     );
   };

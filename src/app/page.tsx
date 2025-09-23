@@ -28,8 +28,40 @@ const itemVariants = {
 
 export default function Home() {
   const handleUseMyLocation = () => {
-    // Redirect to signup page
-    window.location.href = "/Signup";
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          // Reverse geocode to get a readable location name
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await res.json();
+          const locationName =
+            data.address?.suburb ||
+            data.address?.neighbourhood ||
+            data.address?.city ||
+            data.address?.town ||
+            'Your Area';
+
+          // Redirect to stations page with location in query params
+          window.location.href = `/stations?location=${encodeURIComponent(locationName)}`;
+        } catch (err) {
+          console.error(err);
+          alert('Could not determine your location name.');
+        }
+      },
+      (error) => {
+        alert('Unable to retrieve your location.');
+        console.error(error);
+      }
+    );
   };
 
   return (

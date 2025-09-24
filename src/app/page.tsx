@@ -7,6 +7,7 @@ import Cards from './components/Cards';
 import Faq from './components/faq';
 import { MapPin, Map, Fuel } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const containerVariants = {
   hidden: { opacity: 0, y: 40 },
@@ -27,41 +28,10 @@ const itemVariants = {
 };
 
 export default function Home() {
-  const handleUseMyLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
+  const router = useRouter();
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        try {
-          // Reverse geocode to get a readable location name
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-          );
-          const data = await res.json();
-          const locationName =
-            data.address?.suburb ||
-            data.address?.neighbourhood ||
-            data.address?.city ||
-            data.address?.town ||
-            'Your Area';
-
-          // Redirect to stations page with location in query params
-          window.location.href = `/stations?location=${encodeURIComponent(locationName)}`;
-        } catch (err) {
-          console.error(err);
-          alert('Could not determine your location name.');
-        }
-      },
-      (error) => {
-        alert('Unable to retrieve your location.');
-        console.error(error);
-      }
-    );
+  const handleRedirectToSignup = () => {
+    router.push("/Signup");
   };
 
   return (
@@ -98,18 +68,19 @@ export default function Home() {
             >
               {/* Use My Location → Signup */}
               <button
-                onClick={handleUseMyLocation}
+                onClick={handleRedirectToSignup}
                 className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md"
               >
                 Use My Location
               </button>
 
               {/* Search Area → Signup */}
-              <Link href="/Signup">
-                <button className="border border-white px-6 py-3 rounded-xl font-semibold hover:bg-white hover:text-[#153146] transition shadow-md">
-                  Search Area
-                </button>
-              </Link>
+              <button
+                onClick={handleRedirectToSignup}
+                className="border border-white px-6 py-3 rounded-xl font-semibold hover:bg-white hover:text-[#153146] transition shadow-md"
+              >
+                Search Area
+              </button>
             </motion.div>
           </motion.div>
 

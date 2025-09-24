@@ -1,6 +1,7 @@
 // app/page.tsx (Next.js App Router)
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { User, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -61,11 +62,22 @@ function ViewTrendsCard() {
 }
 
 export default function Dashboard() {
-  const router = useRouter(); // ✅ must be inside the component
-  const username = "Emioluwa"; // Later, fetch from session/auth
+  const router = useRouter();
+  const [username, setUsername] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // fake auth state for demo
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // ✅ Get current user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+      setUsername(parsed.username);
+      setIsLoggedIn(true);
+    }
+  }, []);
+  
 
   return (
     <div className="flex h-screen bg-gray-900 text-white">
@@ -88,7 +100,9 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8 relative">
           <div>
-            <h3 className="text-lg text-gray-400">Welcome {username}</h3>
+            <h3 className="text-lg text-gray-400">
+              Welcome {username ? username : "Guest"},
+            </h3>
             <h2 className="text-2xl font-semibold">Welcome to FuelSmart</h2>
           </div>
 
@@ -102,7 +116,7 @@ export default function Dashboard() {
               <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center cursor-pointer relative">
                 <Bell size={20} />
                 <span className="absolute top-1 right-1 bg-red-500 text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  3
+                  {notifications.length}
                 </span>
               </div>
 
@@ -151,17 +165,28 @@ export default function Dashboard() {
                       </button>
                       <button
                         className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-700 text-red-400"
-                        onClick={() => setIsLoggedIn(false)}
+                        onClick={() => {
+                          localStorage.removeItem("currentUser");
+                          setIsLoggedIn(false);
+                          setUsername(null);
+                          router.push("/Login");
+                        }}
                       >
                         Logout
                       </button>
                     </>
                   ) : (
                     <>
-                      <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-700">
+                      <button
+                        className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-700"
+                        onClick={() => router.push("/Login")}
+                      >
                         Login
                       </button>
-                      <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-700">
+                      <button
+                        className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-700"
+                        onClick={() => router.push("/Signup")}
+                      >
                         Sign Up
                       </button>
                     </>
@@ -231,10 +256,8 @@ export default function Dashboard() {
 
           {/* Right Side */}
           <div className="flex flex-col gap-6">
-            {/* View Trends */}
             <ViewTrendsCard />
 
-            {/* Offline Mode */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="text-lg font-semibold mb-2 text-white">
                 Notifications
@@ -248,6 +271,19 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Button Grid */}
+        <div className="grid grid-cols-3 gap-4 mt-6">
+          <button className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center">
+            Reports
+          </button>
+          <button className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center">
+            Stations
+          </button>
+          <button className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center">
+            Trends
+          </button>
         </div>
       </main>
     </div>

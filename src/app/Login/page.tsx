@@ -31,26 +31,33 @@ export default function Login() {
       setAlert({ type: "error", message: "⚠️ Please fill in all fields." });
       return;
     }
-
+  
     const foundUser = users.find((user) => user.email === email && user.password === password);
-
+  
     if (!foundUser) {
       setAlert({ type: "error", message: "❌ Account not found. Please register first." });
       return;
     }
-
+  
+    // ✅ Save current user to localStorage
+    localStorage.setItem("currentUser", JSON.stringify(foundUser));
+  
     // Success
     setAlert({ type: "success", message: `✅ Welcome back, ${foundUser.username}!` });
+  
+
+    localStorage.setItem("currentUser", JSON.stringify(foundUser));
 
     // Clear inputs
     setEmail("");
     setPassword("");
-
+  
     // Redirect to dashboard
     setTimeout(() => {
       router.push("/Dashboard");
-    }, 2000);
+    }, 1000);
   };
+  
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#192337]">

@@ -6,7 +6,6 @@ import Navbar from './components/Navbar';
 import Cards from './components/Cards';
 import Faq from './components/faq';
 import { MapPin, Map, Fuel } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 const containerVariants = {

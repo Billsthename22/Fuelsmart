@@ -16,6 +16,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   // Load users from localStorage
@@ -31,33 +32,31 @@ export default function Login() {
       setAlert({ type: "error", message: "⚠️ Please fill in all fields." });
       return;
     }
-  
-    const foundUser = users.find((user) => user.email === email && user.password === password);
-  
-    if (!foundUser) {
-      setAlert({ type: "error", message: "❌ Account not found. Please register first." });
+
+    setLoading(true);
+
+    const foundUser = users.find((user) => user.email === email);
+
+    if (!foundUser || foundUser.password !== password) {
+      setAlert({ type: "error", message: "❌ Email or password is incorrect." });
+      setLoading(false);
       return;
     }
-  
+
     // ✅ Save current user to localStorage
     localStorage.setItem("currentUser", JSON.stringify(foundUser));
-  
-    // Success
+
     setAlert({ type: "success", message: `✅ Welcome back, ${foundUser.username}!` });
-  
 
-    localStorage.setItem("currentUser", JSON.stringify(foundUser));
-
-    // Clear inputs
     setEmail("");
     setPassword("");
-  
-    // Redirect to dashboard
+
+    // Redirect after short delay
     setTimeout(() => {
+      setLoading(false);
       router.push("/Dashboard");
-    }, 1000);
+    }, 1500);
   };
-  
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#192337]">
@@ -81,7 +80,6 @@ export default function Login() {
         {/* Login Form */}
         <div className="w-1/2 h-full bg-white flex flex-col items-center justify-center text-center p-10 text-gray-800">
           
-          {/* Alert */}
           {alert && (
             <div
               className={`w-full px-4 py-2 mb-4 text-sm rounded ${
@@ -102,6 +100,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-3 mb-3 border rounded-md"
+            disabled={loading}
           />
           <input
             type="password"
@@ -109,11 +108,12 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-3 mb-2 border rounded-md"
+            disabled={loading}
           />
 
           <div className="flex justify-between items-center w-full text-sm mb-4">
             <label className="flex items-center">
-              <input type="checkbox" className="mr-2" /> Remember me
+              <input type="checkbox" className="mr-2" disabled={loading} /> Remember me
             </label>
             <a href="#" className="text-blue-500 hover:underline">
               Forgot password?
@@ -122,9 +122,12 @@ export default function Login() {
 
           <button
             onClick={handleLogin}
-            className="w-full bg-blue-500 text-white py-3 rounded-md hover:bg-blue-600"
+            disabled={loading}
+            className={`w-full py-3 rounded-md text-white transition ${
+              loading ? "bg-blue-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+            }`}
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
 
           <div className="flex items-center w-full my-4">
@@ -133,10 +136,16 @@ export default function Login() {
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
-          <button className="w-full border py-2 mb-2 rounded-md flex items-center justify-center hover:bg-gray-100">
+          <button
+            disabled={loading}
+            className="w-full border py-2 mb-2 rounded-md flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
+          >
             <FcGoogle className="w-5 h-5 mr-2" /> Login with Google
           </button>
-          <button className="w-full border py-2 rounded-md flex items-center justify-center hover:bg-gray-100">
+          <button
+            disabled={loading}
+            className="w-full border py-2 rounded-md flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
+          >
             <FaApple className="w-5 h-5 mr-2" /> Login with Apple
           </button>
         </div>

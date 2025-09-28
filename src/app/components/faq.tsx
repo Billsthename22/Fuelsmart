@@ -28,7 +28,7 @@ export default function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggleFAQ = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index);
+    setOpenIndex(prev => (prev === index ? null : index));
   };
 
   return (
@@ -41,14 +41,10 @@ export default function FaqSection() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {faqData.map((item, idx) => {
             const isOpen = openIndex === idx;
+
             return (
-              <motion.div
-                key={idx}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: idx * 0.1 }}
-                viewport={{ once: true }}
+              <div
+                key={item.q}
                 className={`rounded-xl border border-green-200 bg-green-50 p-6 shadow-md hover:shadow-lg transition-all cursor-pointer ${
                   isOpen ? 'bg-green-100' : ''
                 }`}
@@ -63,7 +59,7 @@ export default function FaqSection() {
                   )}
                 </div>
 
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {isOpen && (
                     <motion.p
                       key="answer"
@@ -77,7 +73,7 @@ export default function FaqSection() {
                     </motion.p>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             );
           })}
         </div>

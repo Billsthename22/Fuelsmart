@@ -6,7 +6,6 @@ import Image from "next/image";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple } from "react-icons/fa";
 
-// ✅ Define a proper type for your user
 interface User {
   username: string;
   email: string;
@@ -17,11 +16,11 @@ export default function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [users, setUsers] = useState<User[]>([]); // 👈 no more "any[]"
+  const [users, setUsers] = useState<User[]>([]);
   const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [loading, setLoading] = useState(false); // 👈 loading state
   const router = useRouter();
 
-  // Load saved users from localStorage
   useEffect(() => {
     const storedUsers = localStorage.getItem("users");
     if (storedUsers) {
@@ -34,27 +33,39 @@ export default function Register() {
       setAlert({ type: "error", message: "⚠️ Please fill in all fields." });
       return;
     }
-
+  
+    // ✅ Check if email already exists
+    const emailExists = users.some((user) => user.email === email);
+    if (emailExists) {
+      setAlert({ type: "error", message: "⚠️ An account with this email already exists." });
+      return;
+    }
+  
+    setLoading(true);
+  
     const newUser: User = { username, email, password };
-
-    // Save to array + localStorage
     const updatedUsers = [...users, newUser];
+  
+    // Save users list
     setUsers(updatedUsers);
     localStorage.setItem("users", JSON.stringify(updatedUsers));
-
-    // Success alert
+  
+    // Save current user (auto login)
+    localStorage.setItem("currentUser", JSON.stringify(newUser));
+  
     setAlert({ type: "success", message: "✅ Account registered successfully!" });
-
-    // Reset inputs
+  
     setUsername("");
     setEmail("");
     setPassword("");
-
-    // Redirect after 2.5s
+  
+    // Redirect directly to dashboard
     setTimeout(() => {
-      router.push("/Login");
-    }, 2500);
+      setLoading(false);
+      router.push("/Dashboard");
+    }, 1500);
   };
+  
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#192337] relative overflow-hidden">
@@ -84,7 +95,6 @@ export default function Register() {
         {/* Register Form */}
         <div className="absolute right-0 w-1/2 h-full bg-white flex flex-col items-center justify-center text-center p-10 text-gray-800">
           
-          {/* Alert */}
           {alert && (
             <div
               className={`w-full px-4 py-2 mb-4 text-sm rounded ${
@@ -105,6 +115,7 @@ export default function Register() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full p-3 mb-3 border rounded-md"
+            disabled={loading}
           />
           <input
             type="email"
@@ -112,6 +123,7 @@ export default function Register() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-3 mb-3 border rounded-md"
+            disabled={loading}
           />
           <input
             type="password"
@@ -119,13 +131,17 @@ export default function Register() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-3 mb-4 border rounded-md"
+            disabled={loading}
           />
 
           <button
             onClick={handleRegister}
-            className="w-full bg-blue-500 text-white py-3 rounded-md hover:bg-blue-600"
+            disabled={loading}
+            className={`w-full py-3 rounded-md text-white transition ${
+              loading ? "bg-blue-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+            }`}
           >
-            Register
+            {loading ? "Registering..." : "Register"}
           </button>
 
           <div className="flex items-center w-full my-4">
@@ -134,10 +150,16 @@ export default function Register() {
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
-          <button className="w-full border py-2 mb-2 rounded-md flex items-center justify-center hover:bg-gray-100">
+          <button
+            disabled={loading}
+            className="w-full border py-2 mb-2 rounded-md flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
+          >
             <FcGoogle className="w-5 h-5 mr-2" /> Register with Google
           </button>
-          <button className="w-full border py-2 rounded-md flex items-center justify-center hover:bg-gray-100">
+          <button
+            disabled={loading}
+            className="w-full border py-2 rounded-md flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
+          >
             <FaApple className="w-5 h-5 mr-2" /> Register with Apple
           </button>
         </div>

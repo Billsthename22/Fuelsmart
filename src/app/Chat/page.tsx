@@ -1,108 +1,125 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+
+// Initialize Supabase
+const supabase: SupabaseClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 type Message = {
-  text?: string;
-  sender: string;
-  time: string;
-  avatar: string;
-  reaction?: string | null;
-  image?: string;
-  audio?: string;
+  id?: number;
+  user_id?: string;
+  type: "text" | "image" | "audio";
+  content: string;
+  created_at?: string;
 };
-
-const REACTIONS = ["❤️", "👍", "👎", "😂", "❗", "❓"];
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  const [openPickerFor, setOpenPickerFor] = useState<number | null>(null);
   const [attachmentOpen, setAttachmentOpen] = useState(false);
-
   const [recording, setRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [liveAudioData, setLiveAudioData] = useState<number[]>([]);
-
-  const pickerTimeouts = useRef<Record<number, number>>({});
+  const bottomRef = useRef<HTMLDivElement>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const animationRef = useRef<number | null>(null);
 
-  const formatTime = () => {
-    const date = new Date();
-    return date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
+  const scrollToBottom = () =>
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+
+  // Load messages & subscribe to real-time updates
+  useEffect(() => {
+    async function loadMessages() {
+      const { data } = await supabase
+        .from("messages")
+        .select("*")
+        .order("created_at", { ascending: true });
+      setMessages(data || []);
+      scrollToBottom();
+    }
+
+    loadMessages();
+
+    const channel = supabase
+      .channel("chat")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          setMessages((prev) => [...prev, payload.new as Message]);
+          scrollToBottom();
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  // Get current user
+  const getCurrentUserId = async () => {
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id;
+  };
+
+  // Send text message
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    const userId = await getCurrentUserId();
+    if (!userId) return alert("Not logged in");
+
+    const newMessage = { user_id: userId, type: "text" as const, content: input.trim() };
+    await supabase.from("messages").insert(newMessage);
+    setInput("");
+  };
+
+  // Send image
+  const sendImage = async (file: File) => {
+    const userId = await getCurrentUserId();
+    if (!userId) return alert("Not logged in");
+
+    const fileName = `${Date.now()}-${file.name}`;
+    await supabase.storage.from("chat-uploads").upload(fileName, file);
+
+    const publicUrl = supabase.storage.from("chat-uploads").getPublicUrl(fileName).data.publicUrl;
+
+    await supabase.from("messages").insert({
+      user_id: userId,
+      type: "image",
+      content: publicUrl,
     });
   };
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
+  // Send audio
+  const sendAudio = async (blob: Blob) => {
+    const userId = await getCurrentUserId();
+    if (!userId) return alert("Not logged in");
+
+    const fileName = `voice-${Date.now()}.webm`;
+    await supabase.storage.from("chat-uploads").upload(fileName, blob);
+
+    const publicUrl = supabase.storage.from("chat-uploads").getPublicUrl(fileName).data.publicUrl;
+
+    await supabase.from("messages").insert({
+      user_id: userId,
+      type: "audio",
+      content: publicUrl,
+    });
   };
 
-  const sendMessage = (extra?: { image?: string; audio?: string }) => {
-    if (!input.trim() && !extra?.image && !extra?.audio) return;
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        text: input || undefined,
-        sender: "You",
-        time: formatTime(),
-        avatar: "/avatar-you.png",
-        reaction: null,
-        ...extra,
-      },
-    ]);
-
-    setInput("");
-    setIsTyping(false);
-    setAttachmentOpen(false);
-    scrollToBottom();
-  };
-
-  const handleTyping = (value: string) => {
-    setInput(value);
-    setIsTyping(value.length > 0);
-  };
-
-  const toggleReaction = (index: number, emoji: string) => {
-    setMessages((prev) =>
-      prev.map((m, i) =>
-        i === index ? { ...m, reaction: m.reaction === emoji ? null : emoji } : m
-      )
-    );
-    setOpenPickerFor(null);
-  };
-
-  const onPickerButtonClick = (index: number) => {
-    setOpenPickerFor((cur) => (cur === index ? null : index));
-  };
-
-  const handlePointerDown = (index: number) => {
-    const id = window.setTimeout(() => setOpenPickerFor(index), 400);
-    pickerTimeouts.current[index] = id;
-  };
-
-  const handlePointerUpOrLeave = (index: number) => {
-    const id = pickerTimeouts.current[index];
-    if (id) {
-      clearTimeout(id);
-      delete pickerTimeouts.current[index];
-    }
-  };
-
+  // Start recording audio
   const startRecording = async () => {
     if (recording) return;
     setRecording(true);
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
+    const chunks: Blob[] = [];
+
     const audioCtx = new AudioContext();
     const source = audioCtx.createMediaStreamSource(stream);
     const analyser = audioCtx.createAnalyser();
@@ -113,195 +130,58 @@ export default function ChatPage() {
     dataArrayRef.current = dataArray;
     source.connect(analyser);
 
-    const recorder = new MediaRecorder(stream);
-    setAudioChunks([]);
-    recorder.ondataavailable = (e) => setAudioChunks((prev) => [...prev, e.data]);
-    recorder.onstop = () => {
-      const blob = new Blob(audioChunks, { type: "audio/webm" });
-      const audioURL = URL.createObjectURL(blob);
-      sendMessage({ audio: audioURL });
-      stream.getTracks().forEach((track) => track.stop());
+    const recorder = new MediaRecorder(stream, { mimeType });
+    recorder.ondataavailable = (e) => chunks.push(e.data);
+    recorder.onstop = async () => {
+      const blob = new Blob(chunks, { type: mimeType });
+      await sendAudio(blob);
+
+      stream.getTracks().forEach((t) => t.stop());
       setRecording(false);
       cancelAnimationFrame(animationRef.current!);
       setLiveAudioData([]);
     };
+
     recorder.start();
     setMediaRecorder(recorder);
 
     const draw = () => {
       if (!analyserRef.current || !dataArrayRef.current) return;
       analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-      setLiveAudioData(Array.from(dataArrayRef.current));
+      setLiveAudioData([...dataArrayRef.current]);
       animationRef.current = requestAnimationFrame(draw);
     };
     draw();
   };
 
-  const stopRecording = () => {
-    if (!mediaRecorder) return;
-    mediaRecorder.stop();
-  };
-
-  useEffect(() => scrollToBottom(), []);
-
-  useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        !target.closest("[data-reaction-picker]") &&
-        !target.closest("[data-reaction-btn]") &&
-        !target.closest("[data-attachment]") &&
-        !target.closest("[data-attachment-btn]")
-      ) {
-        setOpenPickerFor(null);
-        setAttachmentOpen(false);
-      }
-    };
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
-  }, []);
-
-  const renderWaveform = (data: number[], width = 100, height = 20) => {
-    return (
-      <svg width={width} height={height} className="rounded-lg bg-blue-100">
-        {data.map((v, i) => {
-          const barHeight = (v / 255) * height;
-          const x = (i / data.length) * width;
-          return (
-            <rect
-              key={i}
-              x={x}
-              y={height - barHeight}
-              width={width / data.length}
-              height={barHeight}
-              fill="#2563eb"
-            />
-          );
-        })}
-      </svg>
-    );
-  };
+  const stopRecording = () => mediaRecorder?.stop();
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* HEADER */}
-      <div className="p-4 bg-[#111827] text-white text-lg font-semibold">
-        FuelSmart Group Chat
-      </div>
+    <div className="flex flex-col h-screen bg-gray-100 text-black">
+      {/* Header */}
+      <div className="p-4 bg-[#111827] text-white font-semibold">FuelSmart Group Chat</div>
 
-      {/* CHAT BODY */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`relative flex items-start gap-3 ${
-              msg.sender === "You" ? "flex-row-reverse" : ""
-            }`}
-            onPointerDown={() => handlePointerDown(index)}
-            onPointerUp={() => handlePointerUpOrLeave(index)}
-            onPointerLeave={() => handlePointerUpOrLeave(index)}
-          >
-            {/* Avatar */}
-            <img src={msg.avatar} className="w-10 h-10 rounded-full object-cover" />
-
-            {/* Message bubble */}
-            <div
-              className={`max-w-[75%] p-3 rounded-xl shadow-md text-black ${
-                msg.sender === "You" ? "bg-[#e5e7eb]" : "bg-white"
-              }`}
-            >
-              {msg.sender && <p className="text-xs opacity-60 mb-1">{msg.sender}</p>}
-              {msg.text && <p className="font-medium break-words">{msg.text}</p>}
-              {msg.image && <img src={msg.image} alt="sent" className="mt-2 rounded-lg max-w-full h-auto" />}
-              {msg.audio && renderWaveform(new Array(50).fill(100)) /* static waveform */}
-              {recording && renderWaveform(liveAudioData)} {/* live waveform while recording */}
-              <p className="text-[10px] mt-1 text-gray-600">{msg.time}</p>
-            </div>
-
-            {/* Reaction sticker */}
-            {msg.reaction && (
-              <div
-                className={`absolute ${
-                  msg.sender === "You" ? "right-[56px]" : "left-[56px]"
-                } -top-2 z-30`}
-              >
-                <div className="inline-flex items-center justify-center px-2 py-1 rounded-full shadow-md bg-white text-sm animate-pop">
-                  <span className="text-[14px]">{msg.reaction}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Reaction button */}
-            <button
-              data-reaction-btn
-              onClick={(e) => {
-                e.stopPropagation();
-                onPickerButtonClick(index);
-              }}
-              className="z-10 w-8 h-8 rounded-md flex items-center justify-center hover:bg-gray-200 transition-colors"
-              title="React"
-            >
-              <span className="text-lg select-none">😊</span>
-            </button>
-
-            {/* Reaction picker */}
-            {openPickerFor === index && (
-              <div
-                data-reaction-picker
-                className={`absolute ${msg.sender === "You" ? "right-10" : "left-10"} top-0 z-20`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex gap-2 p-2 bg-white rounded-2xl shadow-xl border">
-                  {REACTIONS.map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => toggleReaction(index, r)}
-                      className={`text-lg px-2 py-1 rounded-lg transform transition-transform hover:-translate-y-1 active:scale-95 ${
-                        messages[index].reaction === r ? "ring-2 ring-offset-1 ring-gray-300" : ""
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        {messages.map((msg) => (
+          <div key={msg.id} className="p-2 bg-white rounded shadow max-w-xs">
+            {msg.type === "text" && <p>{msg.content}</p>}
+            {msg.type === "image" && <img src={msg.content} className="rounded-xl w-48" />}
+            {msg.type === "audio" && <audio controls src={msg.content}></audio>}
           </div>
         ))}
-
-        {/* Typing indicator */}
-        {isTyping && (
-          <div className="flex items-center gap-2 opacity-60">
-            <div className="w-8 h-8 bg-gray-300 rounded-full animate-pulse"></div>
-            <div className="bg-white px-4 py-2 rounded-xl shadow text-sm">typing...</div>
-          </div>
-        )}
-
         <div ref={bottomRef}></div>
       </div>
 
-      {/* INPUT */}
-      <div className="p-4 bg-white flex gap-2 items-center border-t relative">
-        {/* Attachment button */}
-        <button
-          data-attachment-btn
-          className="text-2xl"
-          onClick={(e) => {
-            e.stopPropagation();
-            setAttachmentOpen((cur) => !cur);
-          }}
-        >
+      {/* Input */}
+      <div className="p-4 bg-white border-t flex items-center gap-2 relative">
+        <button onClick={() => setAttachmentOpen((x) => !x)} className="text-2xl">
           📎
         </button>
 
-        {/* Attachment popover */}
         {attachmentOpen && (
-          <div
-            data-attachment
-            className="absolute bottom-14 left-4 flex flex-col bg-white shadow-lg rounded-xl border p-2 gap-2"
-          >
-            {/* Image */}
-            <label className="cursor-pointer px-3 py-1 rounded hover:bg-gray-100 flex items-center gap-1">
+          <div className="absolute bottom-14 left-4 bg-white border shadow rounded-xl p-2 flex flex-col gap-2">
+            <label className="px-3 py-1 hover:bg-gray-100 rounded cursor-pointer">
               📷 Image
               <input
                 type="file"
@@ -309,21 +189,21 @@ export default function ChatPage() {
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) sendMessage({ image: URL.createObjectURL(file) });
+                  if (file) sendImage(file);
                 }}
               />
             </label>
-            {/* Voice note */}
+
             {!recording ? (
               <button
-                className="px-3 py-1 rounded hover:bg-gray-100 flex items-center gap-1"
+                className="px-3 py-1 hover:bg-gray-100 rounded"
                 onClick={startRecording}
               >
                 🎤 Start Recording
               </button>
             ) : (
               <button
-                className="px-3 py-1 rounded bg-red-200 flex items-center gap-1"
+                className="px-3 py-1 bg-red-200 rounded"
                 onClick={stopRecording}
               >
                 ⏹ Stop Recording
@@ -332,31 +212,18 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Text input */}
         <input
           value={input}
-          onChange={(e) => handleTyping(e.target.value)}
+          onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          className="flex-1 px-4 py-2 border rounded-xl placeholder-gray-600"
           placeholder="Type a message..."
-          className="flex-1 px-4 py-2 border rounded-xl focus:outline-none"
         />
 
-        {/* Send button */}
-        <button onClick={() => sendMessage()} className="px-5 py-2 bg-[#111827] text-white rounded-xl">
+        <button onClick={sendMessage} className="px-5 py-2 bg-black text-white rounded-xl">
           Send
         </button>
       </div>
-
-      <style>{`
-        @keyframes popIn {
-          0% { transform: scale(0.6); opacity: 0; }
-          60% { transform: scale(1.05); opacity: 1; }
-          100% { transform: scale(1); }
-        }
-        .animate-pop {
-          animation: popIn 180ms ease-out;
-        }
-      `}</style>
     </div>
   );
 }

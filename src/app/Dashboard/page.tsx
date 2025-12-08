@@ -275,16 +275,28 @@ export default function Dashboard() {
 
         {/* Button Grid */}
         <div className="grid grid-cols-3 gap-4 mt-6">
-          <button className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center">
-            Reports
-          </button>
-          <button className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center">
-            Stations
-          </button>
-          <button className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center">
-            Trends
-          </button>
-        </div>
+  <button
+    className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center"
+    onClick={() => router.push("/Reports")}
+  >
+    Reports
+  </button>
+
+  <button
+    className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center"
+    onClick={() => router.push("/Stations")}
+  >
+    Stations
+  </button>
+
+  <button
+    className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center"
+    onClick={() => router.push("/Chat")}
+  >
+    Chat
+  </button>
+</div>
+
       </main>
     </div>
   );

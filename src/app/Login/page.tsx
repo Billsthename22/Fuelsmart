@@ -4,30 +4,28 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple } from "react-icons/fa";
-
-interface User {
-  username: string;
-  email: string;
-  password: string;
-}
+import { supabase } from "../lib/supabaseClient"; // ✅ only import the supabase instance
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
   const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Load users from localStorage
+  // Redirect if already logged in
   useEffect(() => {
-    const storedUsers = localStorage.getItem("users");
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers) as User[]);
-    }
-  }, []);
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.push("/Dashboard");
+      }
+    };
+    checkSession();
+  }, [router]);
 
-  const handleLogin = () => {
+  // Email/password login
+  const handleLogin = async () => {
     if (!email || !password) {
       setAlert({ type: "error", message: "⚠️ Please fill in all fields." });
       return;
@@ -35,33 +33,40 @@ export default function Login() {
 
     setLoading(true);
 
-    const foundUser = users.find((user) => user.email === email);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (!foundUser || foundUser.password !== password) {
-      setAlert({ type: "error", message: "❌ Email or password is incorrect." });
+    if (error) {
+      setAlert({ type: "error", message: `❌ ${error.message}` });
       setLoading(false);
       return;
     }
 
-    // ✅ Save current user to localStorage
-    localStorage.setItem("currentUser", JSON.stringify(foundUser));
-
-    setAlert({ type: "success", message: `✅ Welcome back, ${foundUser.username}!` });
-
+    setAlert({ type: "success", message: `✅ Welcome back!` });
     setEmail("");
     setPassword("");
 
-    // Redirect after short delay
     setTimeout(() => {
       setLoading(false);
       router.push("/Dashboard");
     }, 1500);
   };
 
+  // OAuth login
+  const handleOAuth = async (provider: "google" | "apple") => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({ provider });
+    if (error) {
+      setAlert({ type: "error", message: `⚠️ ${error.message}` });
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#192337]">
       <div className="relative w-[900px] h-[500px] bg-white rounded-xl shadow-lg flex overflow-hidden">
-        
         {/* Left Panel */}
         <div
           className="w-1/2 h-full bg-cover bg-center rounded-r-[100px] flex flex-col items-center justify-center text-white text-center p-10"
@@ -79,7 +84,6 @@ export default function Login() {
 
         {/* Login Form */}
         <div className="w-1/2 h-full bg-white flex flex-col items-center justify-center text-center p-10 text-gray-800">
-          
           {alert && (
             <div
               className={`w-full px-4 py-2 mb-4 text-sm rounded ${
@@ -137,12 +141,14 @@ export default function Login() {
           </div>
 
           <button
+            onClick={() => handleOAuth("google")}
             disabled={loading}
             className="w-full border py-2 mb-2 rounded-md flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
           >
             <FcGoogle className="w-5 h-5 mr-2" /> Login with Google
           </button>
           <button
+            onClick={() => handleOAuth("apple")}
             disabled={loading}
             className="w-full border py-2 rounded-md flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
           >

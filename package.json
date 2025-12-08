@@ -11,6 +11,7 @@
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",
     "@googlemaps/markerclusterer": "^2.6.2",
+    "@supabase/supabase-js": "^2.86.2",
     "chart.js": "^4.5.0",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.536.0",

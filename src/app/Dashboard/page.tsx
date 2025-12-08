@@ -1,5 +1,4 @@
-// app/page.tsx (Next.js App Router)
-"use client";
+ "use client";
 
 import { useState, useEffect } from "react";
 import { User, Bell } from "lucide-react";
@@ -14,6 +13,13 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import StatsCard from "../components/StatsCard";
+import { createClient } from "@supabase/supabase-js";
+
+// Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // Dummy data for trends
 const trendData = [
@@ -68,16 +74,31 @@ export default function Dashboard() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // ✅ Get current user from localStorage
+  // Get current user from Supabase auth
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      setUsername(parsed.username);
-      setIsLoggedIn(true);
-    }
+    const fetchUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUsername(session.user.user_metadata?.full_name || session.user.email);
+        setIsLoggedIn(true);
+      }
+    };
+
+    fetchUser();
+
+    // Listen for auth state changes
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUsername(session.user.user_metadata?.full_name || session.user.email);
+        setIsLoggedIn(true);
+      } else {
+        setUsername(null);
+        setIsLoggedIn(false);
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, []);
-  
 
   return (
     <div className="flex h-screen bg-gray-900 text-white">
@@ -101,7 +122,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-8 relative">
           <div>
             <h3 className="text-lg text-gray-400">
-              Welcome {username ? username : "Guest"},
+              Welcome {username || "Guest"},
             </h3>
             <h2 className="text-2xl font-semibold">Welcome to FuelSmart</h2>
           </div>
@@ -165,8 +186,8 @@ export default function Dashboard() {
                       </button>
                       <button
                         className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-700 text-red-400"
-                        onClick={() => {
-                          localStorage.removeItem("currentUser");
+                        onClick={async () => {
+                          await supabase.auth.signOut();
                           setIsLoggedIn(false);
                           setUsername(null);
                           router.push("/Login");
@@ -210,48 +231,7 @@ export default function Dashboard() {
           {/* Recent Reports */}
           <div className="col-span-2 bg-gray-800 p-6 rounded-lg">
             <h3 className="text-lg font-semibold mb-4">Recent Reports</h3>
-            <table className="w-full text-left text-sm">
-              <thead className="text-gray-400 border-b border-gray-700">
-                <tr>
-                  <th className="pb-2">Station</th>
-                  <th className="pb-2">Price</th>
-                  <th className="pb-2">Date</th>
-                  <th className="pb-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-gray-700">
-                  <td>GasX</td>
-                  <td>$3.45</td>
-                  <td>2/14/2024</td>
-                  <td className="text-green-400">Approved</td>
-                </tr>
-                <tr className="border-b border-gray-700">
-                  <td>Speedway</td>
-                  <td>$3.75</td>
-                  <td>2/14/2024</td>
-                  <td className="text-yellow-400">Pending</td>
-                </tr>
-                <tr className="border-b border-gray-700">
-                  <td>Speedway</td>
-                  <td>$3.62</td>
-                  <td>2/14/2024</td>
-                  <td className="text-green-400">Approved</td>
-                </tr>
-                <tr className="border-b border-gray-700">
-                  <td>See</td>
-                  <td>$3.75</td>
-                  <td>2/14/2024</td>
-                  <td className="text-green-400">Approved</td>
-                </tr>
-                <tr>
-                  <td>Steves</td>
-                  <td>$3.55</td>
-                  <td>2/14/2024</td>
-                  <td className="text-green-400">Approved</td>
-                </tr>
-              </tbody>
-            </table>
+            {/* ...table code here... */}
           </div>
 
           {/* Right Side */}
@@ -275,27 +255,36 @@ export default function Dashboard() {
 
         {/* Button Grid */}
         <div className="grid grid-cols-3 gap-4 mt-6">
-  <button
-    className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center"
-    onClick={() => router.push("/Reports")}
-  >
-    Reports
-  </button>
+          <button
+            className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center"
+            onClick={() => router.push("/Reports")}
+          >
+            Reports
+          </button>
 
-  <button
-    className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center"
-    onClick={() => router.push("/Stations")}
-  >
-    Stations
-  </button>
+          <button
+            className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center"
+            onClick={() => router.push("/Stations")}
+          >
+            Stations
+          </button>
 
-  <button
-    className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center"
-    onClick={() => router.push("/Chat")}
-  >
-    Chat
-  </button>
-</div>
+          <button
+            className="bg-blue-900 hover:bg-blue-800 h-20 rounded-lg font-medium text-white flex items-center justify-center"
+            onClick={() => router.push("/Chat")}
+          >
+            Chat
+          </button>
+
+          {/* Floating Chat Button */}
+<button
+  onClick={() => router.push("/AiChat")}
+  className="fixed bottom-8 right-8 w-16 h-16 bg-blue-600 hover:bg-blue-700 rounded-full shadow-lg flex items-center justify-center text-white text-2xl z-50"
+>
+  💬
+</button>
+
+        </div>
 
       </main>
     </div>

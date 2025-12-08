@@ -34,17 +34,17 @@ export default function ChatPage() {
 
   // Load messages & subscribe to real-time updates
   useEffect(() => {
-    async function loadMessages() {
+    const loadMessages = async () => {
       const { data } = await supabase
         .from("messages")
         .select("*")
         .order("created_at", { ascending: true });
       setMessages(data || []);
       scrollToBottom();
-    }
-
+    };
+  
     loadMessages();
-
+  
     const channel = supabase
       .channel("chat")
       .on(
@@ -56,10 +56,12 @@ export default function ChatPage() {
         }
       )
       .subscribe();
-
-    return () => supabase.removeChannel(channel);
+  
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
-
+  
   // Get current user
   const getCurrentUserId = async () => {
     const { data } = await supabase.auth.getUser();

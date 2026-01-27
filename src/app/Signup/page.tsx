@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple } from "react-icons/fa";
-import { supabase } from "@/app/lib/supabaseClient"; // ✅ correct import
+import { Fuel, ArrowRight, Loader2, User, Mail, Lock } from "lucide-react";
+import { supabase } from "@/app/lib/supabaseClient";
 
 export default function Register() {
   const [username, setUsername] = useState("");
@@ -15,148 +17,164 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Email/password registration
   const handleRegister = async () => {
     if (!username || !email || !password) {
-      setAlert({ type: "error", message: "⚠️ Please fill in all fields." });
+      setAlert({ type: "error", message: "Please fill in all fields." });
       return;
     }
-
     setLoading(true);
-
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { username },
-      },
+      options: { data: { username } },
     });
 
     if (error) {
-      setAlert({ type: "error", message: `⚠️ ${error.message}` });
+      setAlert({ type: "error", message: error.message });
       setLoading(false);
       return;
     }
 
-    setAlert({ type: "success", message: "✅ Account registered successfully!" });
-    setUsername("");
-    setEmail("");
-    setPassword("");
-
-    // Redirect to dashboard after short delay
+    setAlert({ type: "success", message: "Account created! Redirecting..." });
     setTimeout(() => {
       setLoading(false);
       router.push("/Dashboard");
     }, 1500);
   };
 
-  // OAuth registration (Google/Apple)
   const handleOAuth = async (provider: "google" | "apple") => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({ provider });
-    if (error) {
-      setAlert({ type: "error", message: `⚠️ ${error.message}` });
-    }
+    await supabase.auth.signInWithOAuth({ provider });
     setLoading(false);
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#192337] relative overflow-hidden">
-      <div className="relative w-[900px] h-[500px] bg-white rounded-xl shadow-lg overflow-hidden flex">
-        {/* Left Panel */}
-        <div className="absolute top-0 left-0 w-1/2 h-full rounded-r-[100px] overflow-hidden">
+    <div className="flex items-center justify-center min-h-screen bg-[#020617] p-6 relative overflow-hidden">
+      {/* Background Glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-600/10 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full" />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative w-full max-w-[1000px] flex flex-col md:flex-row bg-slate-900/50 border border-white/10 rounded-[2.5rem] overflow-hidden backdrop-blur-xl shadow-2xl shadow-black/50"
+      >
+        {/* Left Side: Visual/Context */}
+        <div className="relative w-full md:w-1/2 min-h-[300px] md:min-h-full overflow-hidden hidden md:block">
           <Image
-            src="/fuelsmartregisterimg.jpg"
-            alt="Register Background"
+            src="/fuelsmartregisterimg.jpg" // Ensure this image is high quality
+            alt="Dashboard Preview"
             fill
-            className="object-cover"
+            className="object-cover opacity-60 mix-blend-luminosity hover:scale-105 transition-transform duration-700"
             priority
           />
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-10">
-            <h1 className="text-4xl font-bold mb-4 drop-shadow-lg">Hello, Welcome!</h1>
-            <p className="text-lg mb-6 drop-shadow-md">Already have an account?</p>
-            <a
-              href="/Login"
-              className="border-2 border-white py-2 px-6 rounded-md hover:bg-white hover:text-blue-500 transition"
-            >
-              Login
-            </a>
-          </div>
-        </div>
-
-        {/* Register Form */}
-        <div className="absolute right-0 w-1/2 h-full bg-white flex flex-col items-center justify-center text-center p-10 text-gray-800">
-          {alert && (
-            <div
-              className={`w-full px-4 py-2 mb-4 text-sm rounded ${
-                alert.type === "success"
-                  ? "bg-green-100 border border-green-400 text-green-700"
-                  : "bg-red-100 border border-red-400 text-red-700"
-              }`}
-            >
-              {alert.message}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-[#020617]/40" />
+          <div className="absolute inset-0 flex flex-col justify-end p-12 space-y-4">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold tracking-widest text-sm uppercase">
+              <Fuel className="w-5 h-5" /> FuelSmart Premium
             </div>
-          )}
+            <h2 className="text-4xl font-bold leading-tight">Start saving at <br/><span className="text-emerald-500">the next pump.</span></h2>
+            <p className="text-slate-400">Join 50,000+ drivers optimizing their fuel spend daily.</p>
+          </div>
+        </div>
 
-          <h2 className="text-2xl font-bold mb-4">Register</h2>
-
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full p-3 mb-3 border rounded-md"
-            disabled={loading}
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 mb-3 border rounded-md"
-            disabled={loading}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 mb-4 border rounded-md"
-            disabled={loading}
-          />
-
-          <button
-            onClick={handleRegister}
-            disabled={loading}
-            className={`w-full py-3 rounded-md text-white transition ${
-              loading ? "bg-blue-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
-            }`}
-          >
-            {loading ? "Registering..." : "Register"}
-          </button>
-
-          <div className="flex items-center w-full my-4">
-            <div className="flex-grow border-t border-gray-300"></div>
-            <span className="px-3 text-gray-500 text-sm">OR</span>
-            <div className="flex-grow border-t border-gray-300"></div>
+        {/* Right Side: Form */}
+        <div className="w-full md:w-1/2 p-8 md:p-14 flex flex-col justify-center">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-white mb-2">Create Account</h2>
+            <p className="text-slate-400 text-sm">
+              Already have an account?{" "}
+              <a href="/Login" className="text-emerald-500 font-semibold hover:underline">Login here</a>
+            </p>
           </div>
 
-          <button
-            onClick={() => handleOAuth("google")}
-            disabled={loading}
-            className="w-full border py-2 mb-2 rounded-md flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
-          >
-            <FcGoogle className="w-5 h-5 mr-2" /> Register with Google
-          </button>
-          <button
-            onClick={() => handleOAuth("apple")}
-            disabled={loading}
-            className="w-full border py-2 rounded-md flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
-          >
-            <FaApple className="w-5 h-5 mr-2" /> Register with Apple
-          </button>
+          <AnimatePresence>
+            {alert && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className={`p-4 mb-6 rounded-xl text-sm font-medium border ${
+                  alert.type === "success" 
+                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+                  : "bg-red-500/10 border-red-500/20 text-red-400"
+                }`}
+              >
+                {alert.message}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="space-y-4">
+            <div className="relative group">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-emerald-500 transition-all placeholder:text-slate-500"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="relative group">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-emerald-500 transition-all placeholder:text-slate-500"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="relative group">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-emerald-500 transition-all placeholder:text-slate-500"
+                disabled={loading}
+              />
+            </div>
+
+            <button
+              onClick={handleRegister}
+              disabled={loading}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-4 rounded-xl font-black text-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : "CREATE ACCOUNT"}
+            </button>
+          </div>
+
+          <div className="flex items-center my-8">
+            <div className="flex-grow border-t border-slate-800"></div>
+            <span className="px-4 text-slate-600 text-xs font-bold tracking-widest uppercase">Or Continue With</span>
+            <div className="flex-grow border-t border-slate-800"></div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => handleOAuth("google")}
+              disabled={loading}
+              className="flex items-center justify-center gap-3 bg-white/5 border border-slate-800 py-3 rounded-xl hover:bg-white/10 transition-all font-bold text-sm"
+            >
+              <FcGoogle className="w-5 h-5" /> Google
+            </button>
+            <button
+              onClick={() => handleOAuth("apple")}
+              disabled={loading}
+              className="flex items-center justify-center gap-3 bg-white/5 border border-slate-800 py-3 rounded-xl hover:bg-white/10 transition-all font-bold text-sm"
+            >
+              <FaApple className="w-5 h-5" /> Apple
+            </button>
+          </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -2,16 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { 
-  User, Bell, Fuel, BarChart3, MapPin, 
+ Bell, Fuel, BarChart3, MapPin, 
   MessageSquare, Settings, LayoutDashboard, 
   History, LogOut, Search, ChevronRight
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  XAxis, YAxis,
   Tooltip, ResponsiveContainer, AreaChart, Area
 } from "recharts";
-import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/app/lib/supabaseClient";
 
 // Updated trend data with a more "organic" feel
@@ -24,10 +23,6 @@ const trendData = [
   { date: "Aug 25", price: 840 },
 ];
 
-const notifications = [
-  { id: 1, text: "Price drop at TotalEnergies Lekki", time: "2m ago", type: 'price' },
-  { id: 2, text: "New station verified in Abuja", time: "10m ago", type: 'verify' },
-];
 
 function ViewTrendsCard() {
   return (
@@ -62,8 +57,8 @@ function ViewTrendsCard() {
 export default function Dashboard() {
   const router = useRouter();
   const [username, setUsername] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
+  const [] = useState(false);
+  const [] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {

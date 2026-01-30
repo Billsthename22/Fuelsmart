@@ -23,6 +23,8 @@ export default function Register() {
       return;
     }
     setLoading(true);
+
+    // 1. Supabase Auth Registration
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -35,7 +37,31 @@ export default function Register() {
       return;
     }
 
+    // 2. Save User Details to Array in Local Storage
+    try {
+      // Get existing users or initialize empty array
+      const existingUsersJSON = localStorage.getItem("fuelSmart_users");
+      const usersArray = existingUsersJSON ? JSON.parse(existingUsersJSON) : [];
+
+      // Create new user object (excluding password for security)
+      const newUser = {
+        id: data.user?.id,
+        username,
+        email,
+        registeredAt: new Date().toISOString(),
+      };
+
+      // Add to array and save
+      usersArray.push(newUser);
+      localStorage.setItem("fuelSmart_users", JSON.stringify(usersArray));
+      
+      console.log("User added to LocalStorage array:", usersArray);
+    } catch (err) {
+      console.error("Local Storage Error:", err);
+    }
+
     setAlert({ type: "success", message: "Account created! Redirecting..." });
+    
     setTimeout(() => {
       setLoading(false);
       router.push("/Dashboard");
@@ -62,7 +88,7 @@ export default function Register() {
         {/* Left Side: Visual/Context */}
         <div className="relative w-full md:w-1/2 min-h-[300px] md:min-h-full overflow-hidden hidden md:block">
           <Image
-            src="/fuelsmartregisterimg.jpg" // Ensure this image is high quality
+            src="/fuelsmartregisterimg.jpg"
             alt="Dashboard Preview"
             fill
             className="object-cover opacity-60 mix-blend-luminosity hover:scale-105 transition-transform duration-700"

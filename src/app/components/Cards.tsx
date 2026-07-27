@@ -1,8 +1,6 @@
 'use client';
-
 import { Clock, Fuel } from 'lucide-react';
 import { motion } from 'framer-motion';
-
 // Moved outside the component for better performance
 const stations = [
   { name: 'NNPC', price: '615' },

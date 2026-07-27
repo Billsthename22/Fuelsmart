@@ -6,23 +6,20 @@ import Sidebar from '@/app/components/Sidebar';
 import carData from '@/data/car_brands_models.json';
 import Navbar from '../components/Navbar';
 import { motion, AnimatePresence } from 'framer-motion';
+
 import { 
   Search, 
   Navigation2, 
-  MapPin, 
   Loader2, 
-  ChevronRight, 
-  Fuel, 
   LocateFixed,
   Menu,
-  X,
   ExternalLink
 } from 'lucide-react';
 
 const stations = [
   'NNPC','Total','TotalEnergies','Oando','MRS','Conoil',
   'Enyo','Ardova','Mobil','Rainoil','Eterna','NorthWest Petroleum',
-  'Heyden','AA Rano','Forte Oil','Nipco','Acorn','Ammasco','Petrocam'
+  'Heyden','AA Rano','Forte Oil','Nipco','Acorn','Ammasco','Petrocam','Fatgbems'
 ];
 
 type ResultItem = {
@@ -187,7 +184,6 @@ export default function FuelMapPage() {
           pageSize: 20,
         }),
       });
-
       const data = await resp.json();
       const items: ResultItem[] = [];
       const bounds = new google.maps.LatLngBounds();

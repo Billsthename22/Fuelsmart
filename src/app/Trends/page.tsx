@@ -24,7 +24,7 @@ const allData = [
   { station: "Oando", location: "Port Harcourt", fuelType: "Gas", prices: [400, 420, 410, 430] },
 ];
 
-export default function TrendsPage() {
+export default function TrendsPage() { 
   const [station, setStation] = useState("");
   const [location, setLocation] = useState("");
   const [fuelType, setFuelType] = useState("");

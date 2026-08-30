@@ -16,7 +16,6 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   BarChart, Bar, CartesianGrid 
 } from "recharts";
-import { supabase } from "@/app/lib/supabaseClient";
 
 // --- DUMMY DATA FOR CHARTS ---
 const savingsHistoryData = [
@@ -49,13 +48,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function getProfile() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      const response = await fetch("/api/auth/me");
+      if (response.ok) {
+        const { user: sessionUser } = await response.json();
         setUser((prev) => ({
           ...prev,
-          email: session.user.email || prev.email,
-          username: session.user.user_metadata?.username || prev.username,
-          fullName: session.user.user_metadata?.full_name || prev.fullName,
+          email: sessionUser.email || prev.email,
+          username: sessionUser.username || prev.username,
         }));
       }
     }
@@ -606,7 +605,7 @@ export default function ProfilePage() {
                 </button>
 
                 <button 
-                  onClick={async () => { await supabase.auth.signOut(); router.push('/Login'); }}
+                  onClick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login'); }}
                   className="w-full p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
                 >
                   <LogOut size={16} /> Sign Out of Account

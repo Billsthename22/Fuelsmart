@@ -1,0 +1,10 @@
+import { createHash } from "crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { attachSession, hashPassword } from "@/app/api/lib/auth";
+import { connectDB } from "@/app/api/lib/mongodb";
+import AdminInvite from "@/app/api/model/AdminInvite";
+import Application from "@/app/api/model/StationApplication";
+import User from "@/app/api/model/User";
+import Station from "@/app/api/model/Station";
+import Assignment from "@/app/api/model/StationAdminAssignment";
+export async function POST(request: NextRequest) { const { token, username, password } = await request.json(); if (!token || !username || !password || password.length < 8) return NextResponse.json({ error: "A valid invite, username, and password of at least 8 characters are required." }, { status: 400 }); await connectDB(); const invite = await AdminInvite.findOne({ tokenHash: createHash("sha256").update(token).digest("hex"), usedAt: null, expiresAt: { $gt: new Date() } }); if (!invite) return NextResponse.json({ error: "This invite is invalid or has expired." }, { status: 400 }); if (await User.exists({ $or: [{ email: invite.email }, { username }] })) return NextResponse.json({ error: "An account with that email or username already exists." }, { status: 409 }); const application = await Application.findById(invite.applicationId); if (!application || application.status !== "APPROVED") return NextResponse.json({ error: "The related station application is not approved." }, { status: 400 }); const user = await User.create({ username, email: invite.email, passwordHash: hashPassword(password), role: "ADMIN" }); const station = await Station.create({ brand: application.brand, branchName: application.branchName, state: application.state, address: application.address, location: application.location, verified: true }); await Assignment.create({ stationId: station._id, userId: user._id, assignedBy: application.reviewedBy }); invite.usedAt = new Date(); await invite.save(); return attachSession(NextResponse.json({ user: { id: user.id, username: user.username, role: user.role } }, { status: 201 }), user.id, "ADMIN"); }

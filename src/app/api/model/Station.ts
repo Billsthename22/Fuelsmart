@@ -1,0 +1,5 @@
+import mongoose, { Schema } from "mongoose";
+const FuelPriceSchema = new Schema({ fuelType: { type: String, enum: ["PMS", "DIESEL", "LPG", "CNG"], required: true }, price: { type: Number, required: true, min: 0 }, available: { type: Boolean, default: true }, updatedAt: { type: Date, default: Date.now }, updatedBy: { type: Schema.Types.ObjectId, ref: "User", required: true } }, { _id: false });
+const StationSchema = new Schema({ brand: { type: String, required: true, trim: true }, branchName: { type: String, required: true, trim: true }, state: { type: String, required: true, trim: true }, address: { type: String, required: true, trim: true }, location: { type: { type: String, enum: ["Point"], required: true, default: "Point" }, coordinates: { type: [Number], required: true } }, currentPrices: { type: [FuelPriceSchema], default: [] }, status: { type: String, enum: ["OPEN", "CLOSED", "TEMPORARILY_UNAVAILABLE"], default: "OPEN" }, verified: { type: Boolean, default: false } }, { timestamps: true });
+StationSchema.index({ location: "2dsphere" });
+export default mongoose.models.Station || mongoose.model("Station", StationSchema);

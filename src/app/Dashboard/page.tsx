@@ -12,7 +12,6 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, 
   AreaChart, Area, CartesianGrid 
 } from "recharts";
-import { supabase } from "@/app/lib/supabaseClient";
 
 // Trend data
 const trendData = [
@@ -84,16 +83,14 @@ function ViewTrendsCard() {
 export default function Dashboard() {
   const router = useRouter();
   const [username, setUsername] = useState<string | null>(null);
+  const [role, setRole] = useState("DRIVER");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUsername(session.user.user_metadata?.username || session.user.email?.split('@')[0]);
-      } else {
-        setUsername("Driver");
-      }
+      const response = await fetch("/api/auth/me");
+      if (response.ok) { const { user } = await response.json(); setUsername(user.username); setRole(user.role); }
+      else router.push("/login");
     };
     fetchUser();
   }, []);
@@ -164,7 +161,7 @@ export default function Dashboard() {
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-white truncate">{username || "User"}</p>
             <p className="text-[10px] text-emerald-500 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Verified Driver
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {role === "ADMIN" ? "Admin" : role === "SUPER_ADMIN" ? "Platform Admin" : "Verified Driver"}
             </p>
           </div>
         </div>
@@ -204,7 +201,7 @@ export default function Dashboard() {
 
             {/* Logout */}
             <button 
-              onClick={async () => { await supabase.auth.signOut(); router.push('/Login'); }} 
+              onClick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login'); }}
               className="p-2.5 bg-red-500/10 rounded-2xl border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors shrink-0"
               title="Logout"
             >

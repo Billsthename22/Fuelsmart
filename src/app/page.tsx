@@ -22,13 +22,16 @@ const Navbar = () => (
         <a href="#coverage" className="hover:text-emerald-400 transition-colors">Coverage</a>
       </div>
 
-      <div className="flex gap-4 items-center">
-        <button className="text-xs font-bold text-slate-300 hover:text-white px-4 py-2 transition tracking-wider">
+      <div className="flex gap-2 sm:gap-4 items-center">
+        <a href="/apply" className="hidden sm:inline text-xs font-bold text-slate-300 hover:text-emerald-400 px-3 py-2 transition tracking-wider">
+          LIST YOUR STATION
+        </a>
+        <a href="/login" className="text-xs font-bold text-slate-300 hover:text-white px-3 py-2 transition tracking-wider">
           LOGIN
-        </button>
-        <button className="bg-emerald-500 hover:bg-emerald-400 text-[#020617] px-5 py-2.5 rounded-full font-bold text-xs tracking-wider transition-all shadow-md shadow-emerald-500/20 active:scale-95">
+        </a>
+        <a href="/signup" className="bg-emerald-500 hover:bg-emerald-400 text-[#020617] px-4 sm:px-5 py-2.5 rounded-full font-bold text-xs tracking-wider transition-all shadow-md shadow-emerald-500/20 active:scale-95">
           GET STARTED
-        </button>
+        </a>
       </div>
     </nav>
   </header>
@@ -87,7 +90,7 @@ export default function Home() {
 
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 pt-2">
               <button
-                onClick={() => router.push("/Signup")}
+                onClick={() => router.push("/signup")}
                 className="group relative px-8 py-4 bg-emerald-500 text-[#020617] font-black rounded-2xl transition-all hover:bg-emerald-400 hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 tracking-wider text-sm"
               >
                 <span>FIND CHEAP FUEL</span>
@@ -99,6 +102,10 @@ export default function Home() {
                 <span>Live Data Map</span>
               </button>
             </motion.div>
+
+            <motion.a variants={itemVariants} href="/apply" className="w-fit text-xs font-bold text-slate-400 hover:text-emerald-400 transition-colors underline underline-offset-4 decoration-slate-600 hover:decoration-emerald-400">
+              Manage a fuel station? Apply to list your branch →
+            </motion.a>
 
             {/* Micro Feature Badges */}
             <motion.div variants={itemVariants} className="pt-4 flex items-center gap-6 text-xs text-slate-500 font-medium">

@@ -12,6 +12,7 @@ export default function VehicleSetup({ onSave, onCancel }: { onSave?: () => void
     tankCapacity: "50",
     avgConsumption: "13.5",
     preferredFuel: "PMS (Petrol)",
+    fuelType: "Petrol",
     drivingStyle: "Mixed Driving",
   });
 

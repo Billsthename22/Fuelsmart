@@ -1,0 +1,6 @@
+import mongoose, { Schema } from "mongoose";
+// Recompile this model during development after schema changes; Mongoose otherwise
+// retains the old model definition while Next.js hot reloads route files.
+if (process.env.NODE_ENV === "development" && mongoose.models.StationApplication) delete mongoose.models.StationApplication;
+const StationApplicationSchema = new Schema({ applicantName: { type: String, required: true, trim: true }, applicantEmail: { type: String, required: true, lowercase: true, trim: true, index: true }, applicantPhone: { type: String, required: true, trim: true }, brand: { type: String, required: true, trim: true }, branchName: { type: String, required: true, trim: true }, state: { type: String, required: true }, address: { type: String, required: true }, location: { type: { type: String, enum: ["Point"], default: "Point" }, coordinates: { type: [Number], required: true } }, status: { type: String, enum: ["PENDING", "APPROVED", "REJECTED"], default: "PENDING", index: true }, reviewNote: { type: String, default: "" }, reviewedBy: { type: Schema.Types.ObjectId, ref: "User" } }, { timestamps: true });
+export default mongoose.models.StationApplication || mongoose.model("StationApplication", StationApplicationSchema);

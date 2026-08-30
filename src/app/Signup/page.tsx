@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple } from "react-icons/fa";
 import { Fuel, ArrowRight, Loader2, User, Mail, Lock } from "lucide-react";
-import { supabase } from "@/app/lib/supabaseClient";
 
 export default function Register() {
   const [username, setUsername] = useState("");
@@ -24,55 +23,23 @@ export default function Register() {
     }
     setLoading(true);
 
-    // 1. Supabase Auth Registration
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { username } },
-    });
-
-    if (error) {
-      setAlert({ type: "error", message: error.message });
+    const response = await fetch("/api/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, email, password }) });
+    const data = await response.json();
+    if (!response.ok) {
+      setAlert({ type: "error", message: data.error || "Unable to create your account." });
       setLoading(false);
       return;
-    }
-
-    // 2. Save User Details to Array in Local Storage
-    try {
-      // Get existing users or initialize empty array
-      const existingUsersJSON = localStorage.getItem("fuelSmart_users");
-      const usersArray = existingUsersJSON ? JSON.parse(existingUsersJSON) : [];
-
-      // Create new user object (excluding password for security)
-      const newUser = {
-        id: data.user?.id,
-        username,
-        email,
-        registeredAt: new Date().toISOString(),
-      };
-
-      // Add to array and save
-      usersArray.push(newUser);
-      localStorage.setItem("fuelSmart_users", JSON.stringify(usersArray));
-      
-      console.log("User added to LocalStorage array:", usersArray);
-    } catch (err) {
-      console.error("Local Storage Error:", err);
     }
 
     setAlert({ type: "success", message: "Account created! Redirecting..." });
     
     setTimeout(() => {
       setLoading(false);
-      router.push("/Dashboard");
+      router.push(data.user.role === "SUPER_ADMIN" ? "/superadmin" : data.user.role === "ADMIN" ? "/admin" : "/Dashboard");
     }, 1500);
   };
 
-  const handleOAuth = async (provider: "google" | "apple") => {
-    setLoading(true);
-    await supabase.auth.signInWithOAuth({ provider });
-    setLoading(false);
-  };
+  const handleOAuth = () => setAlert({ type: "error", message: "Google and Apple registration are not enabled yet." });
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#020617] p-6 relative overflow-hidden">
@@ -110,7 +77,7 @@ export default function Register() {
             <h2 className="text-3xl font-bold text-white mb-2">Create Account</h2>
             <p className="text-slate-400 text-sm">
               Already have an account?{" "}
-              <a href="/Login" className="text-emerald-500 font-semibold hover:underline">Login here</a>
+              <a href="/login" className="text-emerald-500 font-semibold hover:underline">Login here</a>
             </p>
           </div>
 
@@ -185,14 +152,14 @@ export default function Register() {
 
           <div className="grid grid-cols-2 gap-4">
             <button
-              onClick={() => handleOAuth("google")}
+              onClick={handleOAuth}
               disabled={loading}
               className="flex items-center justify-center gap-3 bg-white/5 border border-slate-800 py-3 rounded-xl hover:bg-white/10 transition-all font-bold text-sm"
             >
               <FcGoogle className="w-5 h-5" /> Google
             </button>
             <button
-              onClick={() => handleOAuth("apple")}
+              onClick={handleOAuth}
               disabled={loading}
               className="flex items-center justify-center gap-3 bg-white/5 border border-slate-800 py-3 rounded-xl hover:bg-white/10 transition-all font-bold text-sm"
             >

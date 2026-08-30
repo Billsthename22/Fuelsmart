@@ -1,0 +1,6 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireRoles } from "@/app/api/lib/auth";
+import { connectDB } from "@/app/api/lib/mongodb";
+import PriceHistory from "@/app/api/model/PriceHistory";
+import Assignment from "@/app/api/model/StationAdminAssignment";
+export async function GET(request: NextRequest, { params }: { params: Promise<{ stationId: string }> }) { const session = requireRoles(request, ["ADMIN", "SUPER_ADMIN"]); if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 }); const { stationId } = await params; await connectDB(); if (session.role === "ADMIN" && !(await Assignment.exists({ stationId, userId: session.userId, active: true }))) return NextResponse.json({ error: "Forbidden" }, { status: 403 }); const activity = await PriceHistory.find({ stationId }).sort({ createdAt: -1 }).limit(50).lean(); const latest = new Map<string, number>(); return NextResponse.json({ activity: activity.filter((item: any) => { const key = `${item.fuelType}-${item.price}-${item.available}`; const time = new Date(item.createdAt).getTime(), previous = latest.get(key); if (previous && previous - time < 60_000) return false; latest.set(key, time); return true; }) }); }

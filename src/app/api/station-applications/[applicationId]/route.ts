@@ -1,0 +1,5 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireRoles } from "@/app/api/lib/auth";
+import { connectDB } from "@/app/api/lib/mongodb";
+import Application from "@/app/api/model/StationApplication";
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ applicationId: string }> }) { const session = requireRoles(request, ["SUPER_ADMIN"]); if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 }); const { decision, reviewNote = "" } = await request.json(); if (!["APPROVED", "REJECTED"].includes(decision)) return NextResponse.json({ error: "Decision must be APPROVED or REJECTED." }, { status: 400 }); await connectDB(); const application = await Application.findById((await params).applicationId); if (!application || application.status !== "PENDING") return NextResponse.json({ error: "Pending application not found." }, { status: 404 }); application.status = decision; application.reviewNote = reviewNote; application.reviewedBy = session.userId; await application.save(); return NextResponse.json({ application }); }

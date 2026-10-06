@@ -43,9 +43,10 @@ describe("registered station map", () => {
   });
 
   it("shows the selected real station and builds its external navigation URL", () => {
-    render(<StationDetailsPanel station={station} onDirections={vi.fn()} />);
+    render(<StationDetailsPanel station={station} onDirections={vi.fn()} directionsAvailable={false} />);
     expect(screen.getByText(/Mobil — Wilmer/i)).toBeInTheDocument();
     expect(screen.getByText(/₦950/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /choose your location/i })).toBeDisabled();
     expect(screen.getByRole("link", { name: /open Google Maps/i })).toHaveAttribute("href", "https://www.google.com/maps/dir/?api=1&destination=6.47%2C3.36");
   });
 

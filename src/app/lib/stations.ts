@@ -1,6 +1,6 @@
 export const FUEL_TYPES = ["PMS", "DIESEL", "LPG", "CNG"] as const;
 export type FuelType = (typeof FUEL_TYPES)[number];
-export type StationStatus = "OPEN" | "CLOSED" | "TEMPORARILY_UNAVAILABLE";
+export type StationStatus = "OPEN" | "CLOSED" | "TEMPORARILY_UNAVAILABLE" | "UNKNOWN";
 
 export type FuelPriceSummary = {
   fuelType: FuelType;

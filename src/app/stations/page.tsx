@@ -7,6 +7,7 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { ArrowLeft, Fuel, LocateFixed, Search } from "lucide-react";
 import FuelStationMap from "@/app/components/map/FuelStationMap";
 import { StationSummary } from "@/app/lib/stations";
+import { mergeNearbyStations, searchNearbyGoogleStations } from "@/app/lib/nearby-stations";
 
 type Point = { lat: number; lng: number };
 
@@ -28,6 +29,8 @@ function FuelMapContent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [address, setAddress] = useState("");
+  const requestedRadius = Number(params.get("radiusKm") ?? 8);
+  const [radius, setRadius] = useState(Math.min(Math.max(Number.isFinite(requestedRadius) ? requestedRadius : 8, 1), 50));
 
   useEffect(() => {
     fetch("/api/auth/me").then(async (response) => {
@@ -46,14 +49,22 @@ function FuelMapContent() {
 
   const loadStations = useCallback(async () => {
     setLoading(true); setError("");
-    const query = new URLSearchParams({ radiusKm: "50" });
+    const query = new URLSearchParams({ radiusKm: String(radius) });
     if (userLocation) { query.set("lat", String(userLocation.lat)); query.set("lng", String(userLocation.lng)); }
     try {
       const response = await fetch(`/api/stations?${query.toString()}`);
       if (!response.ok) throw new Error("Could not load stations");
       const data = await response.json();
       let rows: StationSummary[] = data.stations || [];
-      if (selectedFromUrl && !rows.some((station) => station._id === selectedFromUrl)) {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (userLocation && apiKey) {
+        try {
+          rows = mergeNearbyStations(rows, await searchNearbyGoogleStations({ apiKey, center: userLocation, radiusKm: radius }));
+        } catch {
+          // Keep registered FuelSmart stations visible if Places search fails.
+        }
+      }
+      if (selectedFromUrl && !selectedFromUrl.startsWith("google:") && !rows.some((station) => station._id === selectedFromUrl)) {
         const detail = await fetch(`/api/stations/${selectedFromUrl}`);
         if (detail.ok) rows = [await detail.json().then((value) => value.station), ...rows];
       }
@@ -62,7 +73,7 @@ function FuelMapContent() {
     } catch {
       setError("Could not load registered FuelSmart stations.");
     } finally { setLoading(false); }
-  }, [selectedFromUrl, userLocation]);
+  }, [radius, selectedFromUrl, userLocation]);
 
   useEffect(() => { const timer = window.setTimeout(loadStations, 0); return () => window.clearTimeout(timer); }, [loadStations]);
 
@@ -82,6 +93,7 @@ function FuelMapContent() {
   function selectStation(stationId: string) {
     setSelectedId(stationId);
     const next = new URLSearchParams({ stationId });
+    next.set("radiusKm", String(radius));
     if (userLocation) { next.set("lat", String(userLocation.lat)); next.set("lng", String(userLocation.lng)); }
     router.replace(`/stations?${next.toString()}`, { scroll: false });
   }
@@ -90,9 +102,9 @@ function FuelMapContent() {
 
   return <div className="flex min-h-screen flex-col bg-[#020617] text-slate-100">
     <header className="flex flex-col gap-4 border-b border-slate-800 bg-slate-950 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex items-center gap-4"><Link href="/Dashboard" className="rounded-xl border border-slate-800 p-2 text-slate-400 hover:text-white"><ArrowLeft size={18} /></Link><Link href="/Dashboard" className="flex items-center gap-2 text-xl font-black italic"><span className="rounded-lg bg-emerald-500 p-2 text-slate-950"><Fuel size={18} /></span>FUEL<span className="text-emerald-400 not-italic">SMART</span></Link><div className="hidden border-l border-slate-800 pl-4 lg:block"><p className="text-sm font-bold">Station navigation</p><p className="text-xs text-slate-500">Only registered and verified FuelSmart branches</p></div></div>
-      <div className="flex flex-col gap-2 sm:flex-row"><form onSubmit={submitAddress} className="relative min-w-0 sm:w-80"><Search className="absolute left-3 top-3.5 text-slate-500" size={15} /><input ref={addressRef} value={address} onChange={(event) => setAddress(event.target.value)} aria-label="Search your location" placeholder="Search your location or area" className="w-full rounded-xl border border-slate-700 bg-[#020617] py-3 pl-9 pr-3 text-sm outline-none focus:border-emerald-500" /></form><button onClick={locate} className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold"><LocateFixed size={16} />My location</button></div>
+      <div className="flex items-center gap-4"><Link href="/Dashboard" className="rounded-xl border border-slate-800 p-2 text-slate-400 hover:text-white"><ArrowLeft size={18} /></Link><Link href="/Dashboard" className="flex items-center gap-2 text-xl font-black italic"><span className="rounded-lg bg-emerald-500 p-2 text-slate-950"><Fuel size={18} /></span>FUEL<span className="text-emerald-400 not-italic">SMART</span></Link><div className="hidden border-l border-slate-800 pl-4 lg:block"><p className="text-sm font-bold">Station navigation</p><p className="text-xs text-slate-500">Verified FuelSmart stations and unverified nearby listings</p></div></div>
+      <div className="flex flex-col gap-2 sm:flex-row"><form onSubmit={submitAddress} className="relative min-w-0 sm:w-80"><Search className="absolute left-3 top-3.5 text-slate-500" size={15} /><input ref={addressRef} value={address} onChange={(event) => setAddress(event.target.value)} aria-label="Search your location" placeholder="Search your location or area" className="w-full rounded-xl border border-slate-700 bg-[#020617] py-3 pl-9 pr-3 text-sm outline-none focus:border-emerald-500" /></form><select aria-label="Nearby radius" value={radius} onChange={(event) => setRadius(Number(event.target.value))} className="rounded-xl border border-slate-700 bg-[#020617] px-3 py-3 text-sm">{[1, 5, 8, 15, 25, 50].map((km) => <option key={km} value={km}>{km} km</option>)}</select><button onClick={locate} className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold"><LocateFixed size={16} />My location</button></div>
     </header>
-    <main className="relative min-h-[calc(100vh-89px)] flex-1"><FuelStationMap stations={stations} selectedStationId={selectedId} userLocation={userLocation} onSelect={selectStation} error={error || undefined} onRetry={loadStations} />{loading && <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full bg-slate-950/90 px-4 py-2 text-xs font-bold text-emerald-300 shadow-xl">Loading verified stations…</div>}{!loading && !error && !stations.length && <div className="absolute left-1/2 top-20 z-20 -translate-x-1/2 rounded-2xl border border-slate-700 bg-slate-950/95 p-5 text-center text-sm text-slate-300">No verified stations were found in this area.</div>}</main>
+    <main className="relative min-h-[calc(100vh-89px)] flex-1"><FuelStationMap stations={stations} selectedStationId={selectedId} userLocation={userLocation} onSelect={selectStation} error={error || undefined} onRetry={loadStations} />{loading && <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full bg-slate-950/90 px-4 py-2 text-xs font-bold text-emerald-300 shadow-xl">Scanning {radius} km around you…</div>}{!loading && !error && !stations.length && <div className="absolute left-1/2 top-20 z-20 -translate-x-1/2 rounded-2xl border border-slate-700 bg-slate-950/95 p-5 text-center text-sm text-slate-300">No fuel stations were found within {radius} km.</div>}</main>
   </div>;
 }

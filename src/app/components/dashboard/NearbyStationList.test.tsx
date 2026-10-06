@@ -38,11 +38,12 @@ describe("NearbyStationList", () => {
   });
 
   it("renders real station status, price availability, distance and map link", () => {
-    render(<NearbyStationList state="ready" stations={[baseStation]} onRetry={vi.fn()} userLocation={{ lat: 6.45, lng: 3.39 }} />);
+    render(<NearbyStationList state="ready" stations={[baseStation]} onRetry={vi.fn()} userLocation={{ lat: 6.45, lng: 3.39 }} radiusKm={15} />);
     expect(screen.getByText("Station open")).toBeInTheDocument();
     expect(screen.getByText("Fuel unavailable")).toBeInTheDocument();
     expect(screen.getByText("2.45 km away")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /view map/i })).toHaveAttribute("href", expect.stringContaining("stationId=station-1"));
+    expect(screen.getByRole("link", { name: /view map/i })).toHaveAttribute("href", expect.stringContaining("radiusKm=15"));
   });
 
   it("keeps closed stations visible and labels stations without prices", () => {

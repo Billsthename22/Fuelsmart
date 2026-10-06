@@ -33,7 +33,7 @@ export default function FuelStationMap({ apiKey = process.env.NEXT_PUBLIC_GOOGLE
     for (const marker of markersRef.current) marker.map = null;
     const bounds = new google.maps.LatLngBounds();
     markersRef.current = stations.map((station) => {
-      const marker = new google.maps.marker.AdvancedMarkerElement({ map: mapRef.current, position: station.coordinates, title: `${station.brand} — ${station.branchName}` });
+      const marker = new google.maps.marker.AdvancedMarkerElement({ map: mapRef.current, position: station.coordinates, title: station.branchName ? `${station.brand} — ${station.branchName}` : station.brand });
       marker.addListener("gmp-click", () => onSelect(station._id));
       bounds.extend(station.coordinates);
       return marker;

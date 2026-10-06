@@ -9,6 +9,7 @@ import { FUEL_TYPES, FuelType, StationSummary } from "@/app/lib/stations";
 import NearbyStationList from "@/app/components/dashboard/NearbyStationList";
 import DashboardDemoWidgets from "@/app/components/dashboard/DashboardDemoWidgets";
 import LocationAccessPanel from "@/app/components/dashboard/LocationAccessPanel";
+import { mergeNearbyStations, searchNearbyGoogleStations } from "@/app/lib/nearby-stations";
 
 type Point = { lat: number; lng: number };
 
@@ -58,7 +59,20 @@ export default function Dashboard() {
       const response = await fetch(`/api/stations?${params.toString()}`);
       if (!response.ok) throw new Error("station request failed");
       const data = await response.json();
-      setStations(data.stations || []);
+      let rows: StationSummary[] = data.stations || [];
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (location && apiKey && !fuelType && !availableOnly) {
+        try {
+          const discovered = (await searchNearbyGoogleStations({ apiKey, center: location, radiusKm: radius })).filter((station) => {
+            const term = search.trim().toLowerCase();
+            return !term || station.brand.toLowerCase().includes(term) || station.address.toLowerCase().includes(term);
+          });
+          rows = mergeNearbyStations(rows, discovered);
+        } catch {
+          // FuelSmart records remain usable when Google Places is unavailable.
+        }
+      }
+      setStations(rows);
       setListState("ready");
     } catch {
       setListState("error");
@@ -75,7 +89,7 @@ export default function Dashboard() {
     if (!locationDenied || !addressRef.current) return;
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) return;
-    new Loader({ apiKey, version: "weekly", libraries: ["places"] }).load().then(() => {
+    new Loader({ apiKey, version: "weekly", libraries: ["marker", "places"] }).load().then(() => {
       if (!addressRef.current) return;
       const autocomplete = new google.maps.places.Autocomplete(addressRef.current, { componentRestrictions: { country: "ng" }, fields: ["formatted_address", "geometry"] });
       autocomplete.addListener("place_changed", () => {
@@ -105,7 +119,7 @@ export default function Dashboard() {
         <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400">Live FuelSmart stations</p><h1 className="mt-2 text-3xl font-black">Welcome back, {username}</h1><p className="mt-1 text-sm text-slate-400">Compare verified branch prices before you start driving.</p></div><div className="flex gap-2"><button className="rounded-xl border border-slate-800 bg-slate-900 p-3 text-slate-400"><Bell size={18} /></button><button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); }} className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-rose-400" title="Logout"><LogOut size={18} /></button></div></div>
         <div className="mt-7"><LocationAccessPanel ref={addressRef} denied={locationDenied} onRetry={requestLocation} /></div>
         <div className="mt-6 grid gap-4 sm:grid-cols-3"><Stat label="Nearby branches" value={String(stations.length)} /><Stat label="Open now" value={String(openCount)} /><Stat label="Lowest available price" value={lowestPrice === null ? "—" : `₦${lowestPrice.toLocaleString()}/L`} /></div>
-        <section className="mt-8"><div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end"><div><h2 className="text-xl font-black">Nearby verified stations</h2><p className="mt-1 text-sm text-slate-400">Station status and fuel availability are shown separately.</p></div><div className="grid gap-2 sm:grid-cols-2 lg:flex"><label className="relative"><Search className="absolute left-3 top-3.5 text-slate-500" size={15} /><input aria-label="Search stations" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Station, branch or area" className="w-full rounded-xl border border-slate-700 bg-slate-950 py-3 pl-9 pr-3 text-sm outline-none focus:border-emerald-500" /></label><select aria-label="Search radius" value={radius} onChange={(event) => setRadius(Number(event.target.value))} className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm">{[1, 5, 8, 15, 25, 50].map((km) => <option key={km} value={km}>{km} km radius</option>)}</select><select aria-label="Fuel type" value={fuelType} onChange={(event) => setFuelType(event.target.value as FuelType | "")} className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm"><option value="">All fuels</option>{FUEL_TYPES.map((fuel) => <option key={fuel}>{fuel}</option>)}</select><label className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm"><input type="checkbox" checked={availableOnly} onChange={(event) => setAvailableOnly(event.target.checked)} className="accent-emerald-500" />Available only</label></div></div><NearbyStationList state={listState} stations={stations} onRetry={loadStations} userLocation={location} /></section>
+        <section className="mt-8"><div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end"><div><h2 className="text-xl font-black">Stations near you</h2><p className="mt-1 text-sm text-slate-400">FuelSmart stations are verified; other nearby Google listings are marked unverified.</p></div><div className="grid gap-2 sm:grid-cols-2 lg:flex"><label className="relative"><Search className="absolute left-3 top-3.5 text-slate-500" size={15} /><input aria-label="Search stations" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Station, branch or area" className="w-full rounded-xl border border-slate-700 bg-slate-950 py-3 pl-9 pr-3 text-sm outline-none focus:border-emerald-500" /></label><select aria-label="Search radius" value={radius} onChange={(event) => setRadius(Number(event.target.value))} className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm">{[1, 5, 8, 15, 25, 50].map((km) => <option key={km} value={km}>{km} km radius</option>)}</select><select aria-label="Fuel type" value={fuelType} onChange={(event) => setFuelType(event.target.value as FuelType | "")} className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm"><option value="">All fuels</option>{FUEL_TYPES.map((fuel) => <option key={fuel}>{fuel}</option>)}</select><label className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm"><input type="checkbox" checked={availableOnly} onChange={(event) => setAvailableOnly(event.target.checked)} className="accent-emerald-500" />Available only</label></div></div><NearbyStationList state={listState} stations={stations} onRetry={loadStations} userLocation={location} radiusKm={radius} /></section>
         <DashboardDemoWidgets />
       </div>
     </main>

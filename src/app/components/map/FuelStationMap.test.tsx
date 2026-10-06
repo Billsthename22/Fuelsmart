@@ -20,8 +20,11 @@ const fartherStation: StationSummary = {
   ...station,
   _id: "station-2",
   brand: "TotalEnergies",
-  branchName: "Marine Bridge",
+  branchName: "",
   distanceKm: 4.1,
+  status: "UNKNOWN",
+  verified: false,
+  currentPrices: [],
 };
 
 describe("registered station map", () => {
@@ -56,7 +59,9 @@ describe("registered station map", () => {
     render(<NearbyMapStationList stations={[station, fartherStation]} selectedStationId="station-1" onSelect={select} />);
     expect(screen.getByText("2 stations near you")).toBeInTheDocument();
     expect(screen.getByText(/Mobil — Wilmer/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /TotalEnergies Marine Bridge/i }));
+    expect(screen.getByText("Unverified")).toBeInTheDocument();
+    expect(screen.getByText("Prices unavailable")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /TotalEnergies/i }));
     expect(select).toHaveBeenCalledWith("station-2");
   });
 

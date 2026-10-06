@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StationSummary } from "@/app/lib/stations";
 import FuelStationMap from "./FuelStationMap";
+import NearbyMapStationList from "./NearbyMapStationList";
 import StationDetailsPanel from "./StationDetailsPanel";
 
 const load = vi.fn().mockResolvedValue(undefined);
@@ -13,6 +14,14 @@ const station: StationSummary = {
   coordinates: { lat: 6.47, lng: 3.36 }, status: "OPEN", verified: true, distanceKm: 2.45,
   lastUpdatedAt: "2026-10-06T09:00:00.000Z",
   currentPrices: [{ fuelType: "PMS", price: 950, available: true, updatedAt: "2026-10-06T09:00:00.000Z" }],
+};
+
+const fartherStation: StationSummary = {
+  ...station,
+  _id: "station-2",
+  brand: "TotalEnergies",
+  branchName: "Marine Bridge",
+  distanceKm: 4.1,
 };
 
 describe("registered station map", () => {
@@ -40,6 +49,15 @@ describe("registered station map", () => {
     expect(screen.getByText("Could not load stations")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it("shows nearby stations without requiring a search and selects one", () => {
+    const select = vi.fn();
+    render(<NearbyMapStationList stations={[station, fartherStation]} selectedStationId="station-1" onSelect={select} />);
+    expect(screen.getByText("2 stations near you")).toBeInTheDocument();
+    expect(screen.getByText(/Mobil — Wilmer/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /TotalEnergies Marine Bridge/i }));
+    expect(select).toHaveBeenCalledWith("station-2");
   });
 
   it("shows the selected real station and builds its external navigation URL", () => {

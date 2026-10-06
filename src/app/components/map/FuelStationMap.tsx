@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import { StationSummary } from "@/app/lib/stations";
+import NearbyMapStationList from "./NearbyMapStationList";
 import StationDetailsPanel from "./StationDetailsPanel";
 
 type Point = { lat: number; lng: number };
@@ -56,5 +57,5 @@ export default function FuelStationMap({ apiKey = process.env.NEXT_PUBLIC_GOOGLE
   if (error) return <div className="flex h-full flex-col items-center justify-center bg-slate-950 p-8 text-center text-rose-300"><p>{error}</p>{onRetry && <button onClick={onRetry} className="mt-4 rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-white">Try again</button>}</div>;
   if (!apiKey) return <div className="flex h-full items-center justify-center bg-slate-950 p-8 text-center text-slate-300">Google Maps is not configured. Add the browser Maps API key to use navigation.</div>;
   if (loadError) return <div className="flex h-full items-center justify-center bg-slate-950 p-8 text-center text-rose-300">Google Maps could not load. Check the API key and try again.</div>;
-  return <div className="relative h-full min-h-[560px]"><div ref={containerRef} className="absolute inset-0" />{selected && <div className="absolute bottom-4 left-4 right-4 z-10 mx-auto max-w-xl"><StationDetailsPanel station={selected} onDirections={showDirections} directionsAvailable={Boolean(userLocation)} /></div>}</div>;
+  return <div className="relative h-full min-h-[560px]"><div ref={containerRef} className="absolute inset-0" /><NearbyMapStationList stations={stations} selectedStationId={selected?._id || null} onSelect={onSelect} />{selected && <div className="absolute bottom-4 left-4 right-4 z-10 mx-auto max-w-xl"><StationDetailsPanel station={selected} onDirections={showDirections} directionsAvailable={Boolean(userLocation)} /></div>}</div>;
 }

@@ -1,9 +1,9 @@
 "use client";
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { 
   Sparkles, ArrowRight, Gauge, ShieldCheck, Map, 
-  MapPin, Zap, CheckCircle2, ChevronRight, Fuel, TrendingDown,
+  Zap, CheckCircle2, ChevronRight, Fuel, TrendingDown,
   Navigation
 } from "lucide-react";
 import { useRouter } from "next/navigation"; 
@@ -40,7 +40,7 @@ const Navbar = () => (
 export default function Home() {
   const router = useRouter();
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1, 
@@ -48,7 +48,7 @@ export default function Home() {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { y: 20, opacity: 0 },
     visible: { y: 0, opacity: 1, transition: { duration: 0.5, ease: "easeOut" } },
   };
@@ -219,7 +219,7 @@ export default function Home() {
           <div className="text-center space-y-3 mb-20">
             <span className="text-emerald-400 font-mono text-xs uppercase tracking-widest">Workflow</span>
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">Precision Intelligence</h2>
-            <p className="text-slate-400 italic text-base">"Three steps to a full tank and a full wallet."</p>
+            <p className="text-slate-400 italic text-base">&ldquo;Three steps to a full tank and a full wallet.&rdquo;</p>
           </div>
           
           <div className="relative space-y-12 md:space-y-16">

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/app/api/lib/mongodb";
 import Station from "@/app/api/model/Station";
-import { normalizeStation } from "@/app/lib/stations";
+import { normalizeStation, StationDocumentLike } from "@/app/lib/stations";
 import { parseStationQuery, StationQuery } from "./query";
 
 function mongoFilters(query: StationQuery) {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ stations: stations.map((station) => normalizeStation(station, station.distanceMeters)) });
   }
   const stations = await Station.find(filters).sort({ updatedAt: -1 }).limit(50).lean();
-  return NextResponse.json({ stations: stations.map((station: any) => normalizeStation(station)) });
+  return NextResponse.json({ stations: stations.map((station) => normalizeStation(station as unknown as StationDocumentLike)) });
 }
 
 export async function POST() {

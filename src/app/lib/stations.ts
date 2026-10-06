@@ -24,7 +24,7 @@ export type StationSummary = {
 };
 
 type DateLike = string | Date;
-type StationDocumentLike = {
+export type StationDocumentLike = {
   _id: { toString(): string } | string;
   brand: string;
   branchName: string;

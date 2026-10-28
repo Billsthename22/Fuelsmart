@@ -26,10 +26,10 @@ const Navbar = () => (
         <a href="/apply" className="hidden sm:inline text-xs font-bold text-slate-300 hover:text-emerald-400 px-3 py-2 transition tracking-wider">
           LIST YOUR STATION
         </a>
-        <a href="/Login" className="text-xs font-bold text-slate-300 hover:text-white px-3 py-2 transition tracking-wider">
+        <a href="/login" className="text-xs font-bold text-slate-300 hover:text-white px-3 py-2 transition tracking-wider">
           LOGIN
         </a>
-        <a href="/Signup" className="bg-emerald-500 hover:bg-emerald-400 text-[#020617] px-4 sm:px-5 py-2.5 rounded-full font-bold text-xs tracking-wider transition-all shadow-md shadow-emerald-500/20 active:scale-95">
+        <a href="/signup" className="bg-emerald-500 hover:bg-emerald-400 text-[#020617] px-4 sm:px-5 py-2.5 rounded-full font-bold text-xs tracking-wider transition-all shadow-md shadow-emerald-500/20 active:scale-95">
           GET STARTED
         </a>
       </div>

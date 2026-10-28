@@ -1,0 +1,7 @@
+import { createHash } from "crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { attachSession, hashPassword } from "@/app/api/lib/auth";
+import { connectDB } from "@/app/api/lib/mongodb";
+import SuperAdminInvite from "@/app/api/model/SuperAdminInvite";
+import User from "@/app/api/model/User";
+export async function POST(request: NextRequest) { const { token, fullName, username, password } = await request.json(); if (!token || !fullName?.trim() || !username?.trim() || !password || password.length < 8) return NextResponse.json({ error: "Your full name, username, and password of at least 8 characters are required." }, { status: 400 }); await connectDB(); const invite = await SuperAdminInvite.findOne({ tokenHash: createHash("sha256").update(token).digest("hex"), usedAt: null, expiresAt: { $gt: new Date() } }); if (!invite) return NextResponse.json({ error: "This invitation is invalid or has expired." }, { status: 400 }); if (await User.exists({ $or: [{ email: invite.email }, { username: username.trim() }] })) return NextResponse.json({ error: "An account with this email or username already exists." }, { status: 409 }); const user = await User.create({ fullName: fullName.trim().slice(0, 80), username: username.trim(), email: invite.email, passwordHash: hashPassword(password), role: "SUPER_ADMIN" }); invite.usedAt = new Date(); await invite.save(); return attachSession(NextResponse.json({ user: { id: user.id, username: user.username, email: user.email, role: user.role } }, { status: 201 }), user.id, "SUPER_ADMIN"); }

@@ -1,680 +1,87 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  User, MapPin, Calendar, Award, ShieldCheck, Sparkles, 
-  Car, Fuel, Gauge, Zap, TrendingUp, Navigation, Star, 
-  Trash2, History, CheckCircle2, Clock, Trophy, Flame, 
-  Gift, Bell, ChevronRight, Share2, Copy, Settings, 
-  Lock, Moon, Shield, LogOut, ArrowUpRight, BarChart3, 
-  Bookmark, Edit3, Plus, Activity, Heart, DollarSign,
-  Search, ExternalLink, RefreshCw
-} from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, CartesianGrid 
-} from "recharts";
+import { Bell, Car, CheckCircle2, LockKeyhole, LogOut, MapPin, Save, ShieldAlert, UserRound, X } from "lucide-react";
+import DriverNavigation from "@/app/components/dashboard/DriverNavigation";
 
-// --- DUMMY DATA FOR CHARTS ---
-const savingsHistoryData = [
-  { month: "Jan", spent: 42000, saved: 6500, reports: 12 },
-  { month: "Feb", spent: 38000, saved: 7200, reports: 18 },
-  { month: "Mar", spent: 45000, saved: 5800, reports: 14 },
-  { month: "Apr", spent: 51000, saved: 8900, reports: 22 },
-  { month: "May", spent: 49000, saved: 9400, reports: 25 },
-  { month: "Jun", spent: 44000, saved: 11200, reports: 31 },
-  { month: "Jul", spent: 40000, saved: 12400, reports: 28 },
-];
+type FuelType = "PMS" | "DIESEL" | "LPG" | "CNG";
+type Vehicle = { make?: string; model?: string; year?: number | null; fuelType?: FuelType | null; plateNumber?: string };
+type SettingsUser = { id: string; username: string; email: string; fullName?: string; phone?: string; state?: string; city?: string; preferredFuelType?: FuelType; defaultRadiusKm?: number; notifications?: { stationUpdates?: boolean; communityUpdates?: boolean }; vehicle?: Vehicle | null; reportsSubmitted?: number };
+type SettingsForm = { fullName: string; username: string; phone: string; state: string; city: string; preferredFuelType: FuelType; defaultRadiusKm: number; stationUpdates: boolean; communityUpdates: boolean; make: string; model: string; year: string; vehicleFuelType: FuelType; plateNumber: string };
+const fuels: FuelType[] = ["PMS", "DIESEL", "LPG", "CNG"];
+const emptyForm: SettingsForm = { fullName: "", username: "", phone: "", state: "", city: "", preferredFuelType: "PMS", defaultRadiusKm: 5, stationUpdates: true, communityUpdates: true, make: "", model: "", year: "", vehicleFuelType: "PMS", plateNumber: "" };
+const input = "mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none transition focus:border-emerald-400";
+
+function formFromUser(user: SettingsUser): SettingsForm {
+  return { fullName: user.fullName || "", username: user.username, phone: user.phone || "", state: user.state || "", city: user.city || "", preferredFuelType: user.preferredFuelType || "PMS", defaultRadiusKm: user.defaultRadiusKm || 5, stationUpdates: user.notifications?.stationUpdates !== false, communityUpdates: user.notifications?.communityUpdates !== false, make: user.vehicle?.make || "", model: user.vehicle?.model || "", year: user.vehicle?.year?.toString() || "", vehicleFuelType: user.vehicle?.fuelType || "PMS", plateNumber: user.vehicle?.plateNumber || "" };
+}
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "settings">("overview");
-  const [copiedCode, setCopiedCode] = useState(false);
-  
-  // User Profile State
-  const [user, setUser] = useState({
-    fullName: "Emioluwa Gbajabiamila",
-    username: "emi",
-    email: "e.gbajabiamila@fuelsmart.ng",
-    phone: "+234 812 345 6789",
-    location: "Lagos, Nigeria",
-    memberSince: "July 2026",
-    level: "FuelSmart Gold Driver",
-    score: 94,
-    referralCode: "EMI-FUEL-2026",
-  });
+  const [user, setUser] = useState<SettingsUser | null>(null);
+  const [form, setForm] = useState<SettingsForm>(emptyForm);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwords, setPasswords] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [deactivationOpen, setDeactivationOpen] = useState(false);
+  const [deactivationCode, setDeactivationCode] = useState("");
+  const [deactivationBusy, setDeactivationBusy] = useState(false);
 
   useEffect(() => {
-    async function getProfile() {
-      const response = await fetch("/api/auth/me");
-      if (response.ok) {
-        const { user: sessionUser } = await response.json();
-        setUser((prev) => ({
-          ...prev,
-          email: sessionUser.email || prev.email,
-          username: sessionUser.username || prev.username,
-        }));
-      }
+    async function loadSettings() {
+      const response = await fetch("/api/user-settings");
+      if (response.status === 401) { router.replace("/login"); return; }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { setMessage(data.error || "Could not load your settings."); setLoading(false); return; }
+      setUser(data.user); setForm(formFromUser(data.user)); setLoading(false);
     }
-    getProfile();
-  }, []);
+    void loadSettings();
+  }, [router]);
+  const update = <K extends keyof SettingsForm>(key: K, value: SettingsForm[K]) => setForm((current) => ({ ...current, [key]: value }));
+  async function saveSettings(event: FormEvent) {
+    event.preventDefault(); setSaving(true); setMessage("");
+    const response = await fetch("/api/user-settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fullName: form.fullName, username: form.username, phone: form.phone, state: form.state, city: form.city, preferredFuelType: form.preferredFuelType, defaultRadiusKm: form.defaultRadiusKm, notifications: { stationUpdates: form.stationUpdates, communityUpdates: form.communityUpdates }, vehicle: { make: form.make, model: form.model, year: form.year ? Number(form.year) : null, fuelType: form.vehicleFuelType, plateNumber: form.plateNumber } }) });
+    const data = await response.json().catch(() => ({})); setSaving(false);
+    if (!response.ok) return setMessage(data.error || "Could not save your settings.");
+    setUser((current) => current ? { ...current, ...data.user } : data.user); setForm(formFromUser(data.user)); setMessage("Settings saved.");
+  }
+  async function changePassword(event: FormEvent) {
+    event.preventDefault(); setChangingPassword(true); setMessage("");
+    const response = await fetch("/api/user-settings/password", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(passwords) });
+    const data = await response.json().catch(() => ({})); setChangingPassword(false);
+    if (!response.ok) return setMessage(data.error || "Could not change your password.");
+    setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" }); setShowPasswordForm(false); setMessage("Password changed successfully.");
+  }
+  async function logout() { await fetch("/api/auth/logout", { method: "POST" }); router.replace("/login"); }
+  async function requestDeactivationCode() { setDeactivationBusy(true); setMessage(""); const response = await fetch("/api/user-settings/deactivate/request", { method: "POST" }); const data = await response.json().catch(() => ({})); setDeactivationBusy(false); if (!response.ok) return setMessage(data.error || "Could not send the verification code."); setDeactivationOpen(true); setMessage(`A verification code was sent to ${data.email}.`); }
+  async function deactivate(event: FormEvent) { event.preventDefault(); setDeactivationBusy(true); setMessage(""); const response = await fetch("/api/user-settings/deactivate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: deactivationCode }) }); const data = await response.json().catch(() => ({})); setDeactivationBusy(false); if (response.ok) router.replace("/"); else setMessage(data.error || "Could not deactivate your account."); }
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(user.referralCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-emerald-500/30 overflow-x-hidden pb-20">
-      
-      {/* BACKGROUND GLOWS */}
-      <div className="fixed top-0 left-1/4 w-[600px] h-[600px] bg-emerald-500/10 blur-[150px] rounded-full pointer-events-none -z-10" />
-      <div className="fixed bottom-10 right-1/4 w-[500px] h-[500px] bg-sky-500/10 blur-[150px] rounded-full pointer-events-none -z-10" />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
-
-        {/* ==========================================
-            1. PROFILE HEADER
-        ========================================== */}
-        <section className="relative bg-slate-900/40 border border-slate-800/80 rounded-[2.5rem] p-6 lg:p-8 backdrop-blur-xl overflow-hidden shadow-2xl">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-sky-500" />
-          
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 relative z-10">
-            {/* Profile Avatar */}
-            <div className="relative group">
-              <div className="w-28 h-28 lg:w-32 lg:h-32 rounded-3xl bg-gradient-to-tr from-emerald-500 to-sky-400 p-1 shadow-xl shadow-emerald-500/10">
-                <div className="w-full h-full bg-[#0D1B2A] rounded-[1.3rem] flex items-center justify-center text-4xl font-black text-emerald-400 border border-white/10">
-                  {user.fullName.split(" ").map(n => n[0]).join("")}
-                </div>
-              </div>
-              <button className="absolute -bottom-2 -right-2 p-2 bg-emerald-500 text-slate-950 rounded-xl hover:bg-emerald-400 transition-all shadow-lg">
-                <Edit3 size={16} />
-              </button>
-            </div>
-
-            {/* Profile Details */}
-            <div className="flex-1 text-center md:text-left space-y-3">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center justify-center md:justify-start gap-3">
-                    <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight">{user.fullName}</h1>
-                    <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-1 font-semibold">
-                      <ShieldCheck size={14} /> Verified
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-400 font-mono mt-1">@{user.username} • {user.email}</p>
-                </div>
-
-                <button 
-                  onClick={() => setActiveTab("settings")}
-                  className="px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 self-center md:self-auto"
-                >
-                  <Settings size={16} />
-                  <span>Edit Profile</span>
-                </button>
-              </div>
-
-              {/* Meta Badges */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2 text-xs text-slate-400">
-                <span className="flex items-center gap-1.5"><MapPin size={14} className="text-emerald-400" /> {user.location}</span>
-                <span className="flex items-center gap-1.5"><Award size={14} className="text-amber-400" /> {user.level}</span>
-                <span className="flex items-center gap-1.5"><Calendar size={14} className="text-slate-500" /> Member since {user.memberSince}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation Tabs Bar */}
-          <div className="flex items-center gap-2 mt-8 pt-6 border-t border-slate-800/80 overflow-x-auto no-scrollbar">
-            {[
-              { id: "overview", label: "Overview & Activity" },
-              { id: "analytics", label: "Analytics & Usage" },
-              { id: "settings", label: "Account Settings" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  activeTab === tab.id 
-                    ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20" 
-                    : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* TAB 1: OVERVIEW */}
-        {activeTab === "overview" && (
-          <div className="space-y-8">
-
-            {/* ==========================================
-                2. DRIVER STATISTICS & 16. FUELSMART SCORE
-            ========================================== */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              <StatCard label="Total Saved" value="₦28,450" trend="+18% this month" positive icon={<DollarSign size={18} />} />
-              <StatCard label="Reward Points" value="1,240" trend="Tier 2 Progress" icon={<Gift size={18} />} />
-              <StatCard label="Reports Submitted" value="247" trend="24 verified" icon={<Activity size={18} />} />
-              <StatCard label="Community Rank" value="#15" trend="Top 1% Lagos" icon={<Trophy size={18} />} />
-              <StatCard label="Favorite Stations" value="4 Saved" trend="Live alerts on" icon={<Heart size={18} />} />
-              
-              {/* FuelSmart Score Gauge Card */}
-              <div className="col-span-2 md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-500/10 to-slate-900 border border-emerald-500/30 p-5 rounded-2xl flex flex-col justify-between">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest font-bold">FuelSmart Score</span>
-                  <Sparkles size={14} className="text-emerald-400" />
-                </div>
-                <div className="my-2">
-                  <p className="text-3xl font-black text-white">{user.score}<span className="text-xs text-slate-500 font-normal"> / 100</span></p>
-                </div>
-                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-emerald-400 h-full rounded-full" style={{ width: `${user.score}%` }} />
-                </div>
-              </div>
-            </div>
-
-            {/* TWO COLUMN GRID: VEHICLE & INSIGHTS */}
-            <div className="grid lg:grid-cols-12 gap-8">
-              
-              {/* ==========================================
-                  3. MY VEHICLE & 10. FUEL USAGE
-              ========================================== */}
-              <div className="lg:col-span-6 bg-slate-900/40 border border-slate-800/80 rounded-[2rem] p-6 lg:p-8 backdrop-blur-xl space-y-6">
-                <div className="flex justify-between items-center pb-4 border-b border-slate-800/80">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl">
-                      <Car size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white">My Primary Vehicle</h3>
-                      <p className="text-xs text-slate-400">Connected fuel efficiency metrics</p>
-                    </div>
-                  </div>
-                  <button className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-slate-700 text-xs font-bold rounded-xl text-slate-300 transition-colors">
-                    Edit Vehicle
-                  </button>
-                </div>
-
-                {/* Specs Display */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <SpecBox label="Brand / Model" value="Toyota Corolla" sub="2021 Edition" />
-                  <SpecBox label="Fuel Type" value="PMS (Petrol)" sub="Octane 91+" />
-                  <SpecBox label="Tank Capacity" value="50 Liters" sub="Full Tank ≈ ₦37.5k" />
-                  <SpecBox label="Avg Economy" value="13.5 km/L" sub="City / Highway" />
-                  <SpecBox label="Monthly Spend" value="₦42,000" sub="Est. 3.2 Fills" />
-                  <SpecBox label="Tank Status" value="~65% Full" sub="Calculated via AI" />
-                </div>
-              </div>
-
-              {/* ==========================================
-                  4. FUELSMART INSIGHTS
-              ========================================== */}
-              <div className="lg:col-span-6 bg-gradient-to-br from-slate-900/80 via-slate-900/40 to-slate-950 border border-slate-800/80 rounded-[2rem] p-6 lg:p-8 backdrop-blur-xl space-y-6 relative overflow-hidden">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-800/80">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-xl">
-                      <Zap size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white">AI Personalized Insights</h3>
-                      <p className="text-xs text-slate-400">Automated price optimizations</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-full border border-sky-500/20 font-semibold">
-                    REAL-TIME
-                  </span>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-1">
-                    <p className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Top Recommendation</p>
-                    <p className="text-sm font-semibold text-slate-200">
-                      <strong className="text-white">Mobil Lekki</strong> has been consistently cheaper for the last 12 days. Save up to ₦60/L by buying there on Tuesdays.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-2xl">
-                      <p className="text-xs text-slate-400">Est. Monthly Savings</p>
-                      <p className="text-2xl font-black text-emerald-400 mt-1">₦4,800</p>
-                    </div>
-                    <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-2xl">
-                      <p className="text-xs text-slate-400">Most Visited Station</p>
-                      <p className="text-sm font-bold text-white mt-2">TotalEnergies Victoria Island</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* ==========================================
-                5. FAVORITE STATIONS & 11. SAVED STATIONS
-            ========================================== */}
-            <div className="bg-slate-900/40 border border-slate-800/80 rounded-[2rem] p-6 lg:p-8 backdrop-blur-xl space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-bold text-white">Favorite & Bookmarked Stations</h3>
-                  <p className="text-xs text-slate-400">Get priority alerts when prices drop here</p>
-                </div>
-                <button className="text-xs font-bold text-emerald-400 hover:underline flex items-center gap-1">
-                  Manage Saved ({4})
-                </button>
-              </div>
-
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { name: "Mobil Lekki Phase 1", price: "₦720/L", dist: "1.4 km", score: "9.8/10", tag: "Cheapest" },
-                  { name: "NNPC Retail Yaba", price: "₦680/L", dist: "4.2 km", score: "9.4/10", tag: "Low Queue" },
-                  { name: "TotalEnergies Ikeja", price: "₦745/L", dist: "8.1 km", score: "9.1/10", tag: "Verified" },
-                  { name: "Conoil VI", price: "₦750/L", dist: "2.8 km", score: "8.9/10", tag: "Fast Pump" },
-                ].map((station, i) => (
-                  <div key={i} className="p-5 bg-slate-950/50 border border-slate-800/80 rounded-2xl hover:border-emerald-500/40 transition-all space-y-4 group">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                          {station.tag}
-                        </span>
-                        <h4 className="font-bold text-sm text-white mt-2 group-hover:text-emerald-400 transition-colors">{station.name}</h4>
-                        <p className="text-xs text-slate-500">{station.dist} away • Score {station.score}</p>
-                      </div>
-                      <button className="text-slate-600 hover:text-red-400 transition-colors">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/60">
-                      <span className="text-lg font-black text-white">{station.price}</span>
-                      <button className="p-2 bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 rounded-xl transition-all">
-                        <Navigation size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* THREE COLUMN GRID: ACHIEVEMENTS, REWARDS, & TIMELINE */}
-            <div className="grid lg:grid-cols-12 gap-8">
-              
-              {/* ==========================================
-                  7. ACHIEVEMENTS & BADGES
-              ========================================== */}
-              <div className="lg:col-span-4 bg-slate-900/40 border border-slate-800/80 rounded-[2rem] p-6 backdrop-blur-xl space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Trophy size={18} className="text-amber-400" /> Driver Badges
-                  </h3>
-                  <span className="text-xs text-slate-500">6 Unlocked</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { title: "Fuel Hunter", desc: "Reported 50+ prices", icon: "🥇", active: true },
-                    { title: "Route Master", desc: "Used 20+ routes", icon: "🚗", active: true },
-                    { title: "30 Day Streak", desc: "Daily verification", icon: "🔥", active: true },
-                    { title: "Community Hero", desc: "100+ upvotes", icon: "⭐", active: true },
-                    { title: "Verified Reporter", desc: "99% accuracy rate", icon: "🛡️", active: true },
-                    { title: "Top Contributor", desc: "Top 100 Lagos", icon: "👑", active: false },
-                  ].map((badge, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        badge.active 
-                          ? "bg-slate-950/60 border-slate-800 hover:border-amber-500/40" 
-                          : "bg-slate-950/20 border-slate-900 opacity-40 grayscale"
-                      }`}
-                    >
-                      <div className="text-2xl mb-1">{badge.icon}</div>
-                      <p className="text-xs font-bold text-white">{badge.title}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{badge.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ==========================================
-                  8. REWARDS & 18. COMMUNITY RANKING
-              ========================================== */}
-              <div className="lg:col-span-4 bg-slate-900/40 border border-slate-800/80 rounded-[2rem] p-6 backdrop-blur-xl space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Gift size={18} className="text-emerald-400" /> Rewards Progress
-                  </h3>
-                  <span className="text-xs text-emerald-400 font-mono">Gold Tier</span>
-                </div>
-
-                <div className="p-5 bg-gradient-to-br from-emerald-500/10 to-slate-950 border border-emerald-500/20 rounded-2xl space-y-4">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Current Points</span>
-                    <span className="text-white font-bold font-mono">2,450 / 3,000 PTS</span>
-                  </div>
-
-                  <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                    <div className="bg-gradient-to-r from-emerald-500 to-sky-400 h-full rounded-full" style={{ width: "81%" }} />
-                  </div>
-
-                  <p className="text-xs text-slate-400 text-center">
-                    Earn <strong className="text-white">550 more points</strong> to unlock Platinum Status & Free Car Wash vouchers!
-                  </p>
-                </div>
-
-                {/* Community Rank Preview */}
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Lagos Leaderboard</p>
-                  {[
-                    { rank: 1, name: "Tunde O.", pts: "4,820", me: false },
-                    { rank: 2, name: "Chioma A.", pts: "4,150", me: false },
-                    { rank: 15, name: "You (Emioluwa)", pts: "2,450", me: true },
-                  ].map((r, i) => (
-                    <div key={i} className={`flex items-center justify-between p-3 rounded-xl border text-xs ${r.me ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold' : 'bg-slate-950/40 border-slate-800 text-slate-300'}`}>
-                      <span className="flex items-center gap-3">
-                        <span className="font-mono w-4">{r.rank}</span>
-                        <span>{r.name}</span>
-                      </span>
-                      <span className="font-mono">{r.pts} pts</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ==========================================
-                  15. ACTIVITY TIMELINE
-              ========================================== */}
-              <div className="lg:col-span-4 bg-slate-900/40 border border-slate-800/80 rounded-[2rem] p-6 backdrop-blur-xl space-y-6">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Clock size={18} className="text-sky-400" /> Recent Activity
-                </h3>
-
-                <div className="space-y-4 relative before:absolute before:left-3 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-800">
-                  {[
-                    { title: "Reported Mobil Lekki", time: "Yesterday", pts: "+50 Pts", color: "text-emerald-400" },
-                    { title: "Earned Verified Badge", time: "2 days ago", pts: "+100 Pts", color: "text-amber-400" },
-                    { title: "Saved ₦800 on refill", time: "4 days ago", pts: "Saved", color: "text-sky-400" },
-                    { title: "Added Total VI to Saved", time: "Last week", pts: "Bookmarked", color: "text-slate-400" },
-                  ].map((act, i) => (
-                    <div key={i} className="flex items-start gap-4 relative z-10 pl-1">
-                      <div className="w-5 h-5 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center shrink-0 mt-0.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs font-bold text-white">{act.title}</p>
-                        <p className="text-[10px] text-slate-500">{act.time}</p>
-                      </div>
-                      <span className={`text-[10px] font-mono font-bold ${act.color}`}>{act.pts}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-
-            {/* TWO COLUMN GRID: REPORTS & ACTIONS */}
-            <div className="grid lg:grid-cols-12 gap-8">
-              
-              {/* ==========================================
-                  6. RECENT REPORTS
-              ========================================== */}
-              <div className="lg:col-span-8 bg-slate-900/40 border border-slate-800/80 rounded-[2rem] p-6 lg:p-8 backdrop-blur-xl space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-base font-bold text-white">Your Recent Station Reports</h3>
-                  <button className="text-xs text-emerald-400 font-bold hover:underline">View History</button>
-                </div>
-
-                <div className="space-y-3">
-                  {[
-                    { station: "Mobil Lekki Phase 1", price: "₦720/L", queue: "Short Queue", date: "Jul 23, 2026", verified: true },
-                    { station: "NNPC Yaba Outlet", price: "₦680/L", queue: "Moderate Queue", date: "Jul 20, 2026", verified: true },
-                    { station: "TotalEnergies Ikeja", price: "₦745/L", queue: "No Queue", date: "Jul 18, 2026", verified: true },
-                  ].map((report, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-slate-950/50 rounded-2xl border border-slate-800/80">
-                      <div className="space-y-1">
-                        <p className="text-sm font-bold text-white">{report.station}</p>
-                        <p className="text-xs text-slate-500">{report.date} • {report.queue}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-black text-emerald-400">{report.price}</p>
-                        <span className="text-[10px] text-slate-400 flex items-center justify-end gap-1">
-                          <CheckCircle2 size={12} className="text-emerald-500" /> Verified
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ==========================================
-                  13. QUICK ACTIONS & 17. REFERRAL SECTION
-              ========================================== */}
-              <div className="lg:col-span-4 space-y-6">
-                
-                {/* Quick Actions */}
-                <div className="bg-slate-900/40 border border-slate-800/80 rounded-[2rem] p-6 backdrop-blur-xl space-y-4">
-                  <h3 className="text-base font-bold text-white">Quick Actions</h3>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <ActionButton icon={<Plus size={16} />} label="Report Price" primary />
-                    <ActionButton icon={<Search size={16} />} label="Find Stations" />
-                    <ActionButton icon={<Car size={16} />} label="Update Car" />
-                    <ActionButton icon={<Share2 size={16} />} label="Invite Friends" />
-                  </div>
-                </div>
-
-                {/* Referral Box */}
-                <div className="bg-gradient-to-br from-emerald-500/10 to-sky-500/10 border border-emerald-500/20 rounded-[2rem] p-6 backdrop-blur-xl space-y-3">
-                  <p className="text-xs font-mono uppercase tracking-wider text-emerald-400 font-bold">Invite & Earn</p>
-                  <p className="text-xs text-slate-300">Share your code with friends and earn 200 pts for every signup.</p>
-                  
-                  <div className="flex items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                    <span className="text-xs font-mono font-bold text-white flex-1 text-center">{user.referralCode}</span>
-                    <button 
-                      onClick={handleCopyCode} 
-                      className="p-2 bg-emerald-500 text-slate-950 rounded-lg hover:bg-emerald-400 transition-colors text-xs font-bold"
-                    >
-                      {copiedCode ? "Copied!" : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
-        {/* TAB 2: ANALYTICS & USAGE */}
-        {activeTab === "analytics" && (
-          <div className="space-y-8">
-            
-            {/* ==========================================
-                9. SAVINGS HISTORY CHART & 10. FUEL USAGE
-            ========================================== */}
-            <div className="bg-slate-900/40 border border-slate-800/80 rounded-[2.5rem] p-6 lg:p-8 backdrop-blur-xl space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h3 className="text-lg font-bold text-white">Monthly Fuel Spend vs Savings</h3>
-                  <p className="text-xs text-slate-400">7-month aggregated financial breakdown</p>
-                </div>
-                <div className="flex gap-4 text-xs font-mono">
-                  <span className="flex items-center gap-1.5 text-emerald-400">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Money Saved
-                  </span>
-                  <span className="flex items-center gap-1.5 text-sky-400">
-                    <span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> Fuel Spend
-                  </span>
-                </div>
-              </div>
-
-              <div className="h-72 w-full pt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={savingsHistoryData}>
-                    <defs>
-                      <linearGradient id="savedGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="spentGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#0284c7" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#0284c7" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.5} />
-                    <XAxis dataKey="month" stroke="#64748b" fontSize={12} tickLine={false} />
-                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: "#020617", borderColor: "#334155", borderRadius: "12px", fontSize: "12px" }} 
-                    />
-                    <Area type="monotone" dataKey="saved" stroke="#10b981" strokeWidth={3} fill="url(#savedGradient)" />
-                    <Area type="monotone" dataKey="spent" stroke="#0284c7" strokeWidth={3} fill="url(#spentGradient)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* SUBSCRIPTION PLAN PREVIEW */}
-            <div className="bg-slate-900/40 border border-slate-800/80 rounded-[2.5rem] p-6 lg:p-8 backdrop-blur-xl space-y-6">
-              <h3 className="text-lg font-bold text-white">Subscription & Fleet Tier</h3>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { name: "Free Driver", price: "₦0", desc: "Basic crowdsourced reports & maps", current: true },
-                  { name: "FuelSmart Pro", price: "₦2,500/mo", desc: "AI price forecasts & priority alerts", current: false },
-                  { name: "Fleet Manager", price: "₦15,000/mo", desc: "Multi-vehicle tracking & bulk logs", current: false },
-                  { name: "Enterprise", price: "Custom", desc: "API access for logistics providers", current: false },
-                ].map((plan, i) => (
-                  <div key={i} className={`p-5 rounded-2xl border ${plan.current ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-slate-950/40 border-slate-800'} space-y-3`}>
-                    <p className="text-xs font-bold text-emerald-400 uppercase">{plan.name}</p>
-                    <p className="text-2xl font-black text-white">{plan.price}</p>
-                    <p className="text-xs text-slate-400">{plan.desc}</p>
-                    <button className={`w-full py-2 rounded-xl text-xs font-bold ${plan.current ? 'bg-emerald-500 text-slate-950' : 'bg-white/5 hover:bg-white/10 text-white'}`}>
-                      {plan.current ? "Active Plan" : "Upgrade"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* TAB 3: ACCOUNT SETTINGS */}
-        {activeTab === "settings" && (
-          <div className="space-y-8">
-            <div className="grid lg:grid-cols-12 gap-8">
-              
-              {/* ==========================================
-                  14. SETTINGS SHORTCUTS & 20. ACCOUNT INFORMATION
-              ========================================== */}
-              <div className="lg:col-span-8 bg-slate-900/40 border border-slate-800/80 rounded-[2.5rem] p-6 lg:p-8 backdrop-blur-xl space-y-6">
-                <h3 className="text-lg font-bold text-white">Account Information</h3>
-                
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <SettingField label="Full Name" value={user.fullName} />
-                  <SettingField label="Username" value={`@${user.username}`} />
-                  <SettingField label="Email Address" value={user.email} verified />
-                  <SettingField label="Phone Number" value={user.phone} verified />
-                  <SettingField label="Primary Location" value={user.location} />
-                  <SettingField label="Verification Status" value="Tier 2 Verified" verified />
-                </div>
-
-                <div className="pt-6 border-t border-slate-800 space-y-4">
-                  <h4 className="text-sm font-bold text-white">Preferences & Security</h4>
-                  <div className="space-y-2">
-                    <SettingToggle label="Push Notifications for Price Drops" defaultChecked />
-                    <SettingToggle label="Location Services for Automatic Scanning" defaultChecked />
-                    <SettingToggle label="Dark Mode Theme" defaultChecked />
-                  </div>
-                </div>
-              </div>
-
-              {/* SETTINGS ACTIONS */}
-              <div className="lg:col-span-4 bg-slate-900/40 border border-slate-800/80 rounded-[2.5rem] p-6 backdrop-blur-xl space-y-4">
-                <h3 className="text-base font-bold text-white">Security Shortcuts</h3>
-                
-                <button className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 hover:text-white flex items-center justify-between">
-                  <span className="flex items-center gap-2"><Lock size={16} /> Change Password</span>
-                  <ChevronRight size={16} />
-                </button>
-
-                <button className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 hover:text-white flex items-center justify-between">
-                  <span className="flex items-center gap-2"><Shield size={16} /> Two-Factor Auth</span>
-                  <ChevronRight size={16} />
-                </button>
-
-                <button 
-                  onClick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login'); }}
-                  className="w-full p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
-                >
-                  <LogOut size={16} /> Sign Out of Account
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-      </main>
-    </div>
-  );
+  return <div className="min-h-screen bg-[#020617] text-slate-100 lg:flex">
+    <DriverNavigation activeHref="/Profile" username={user?.username} />
+    <main className="w-full px-4 pb-12 pt-24 sm:px-6 lg:px-10 lg:pt-10"><div className="mx-auto max-w-5xl space-y-6">
+      <header className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-800 bg-slate-900/60 p-6 sm:flex-row sm:items-center"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400">Driver account</p><h1 className="mt-2 text-3xl font-black">Settings</h1><p className="mt-2 text-sm text-slate-400">Manage the details FuelSmart uses to personalize nearby stations and fuel updates.</p></div><button onClick={logout} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-200 hover:bg-slate-800"><LogOut size={16} />Log out</button></header>
+      {user && <ProfileSummary user={user} />}
+      {message && <p role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{message}</p>}
+      {loading ? <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-slate-400">Loading your settings…</div> : <>
+        <form onSubmit={saveSettings} className="space-y-6">
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6"><SectionTitle icon={<UserRound size={19} />} title="Profile and account" text="Your email is your verified login identity and cannot be edited here." /><div className="mt-6 grid gap-4 sm:grid-cols-2"><Field label="Full name"><input required value={form.fullName} onChange={(e) => update("fullName", e.target.value)} className={input} /></Field><Field label="Username"><input required minLength={3} value={form.username} onChange={(e) => update("username", e.target.value)} className={input} /></Field><Field label="Email address"><input readOnly value={user?.email || ""} className={`${input} cursor-not-allowed text-slate-400`} /></Field><Field label="Phone number"><input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+234…" className={input} /></Field></div></section>
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6"><SectionTitle icon={<MapPin size={19} />} title="Location and fuel preferences" text="Used as your default when finding nearby stations." /><div className="mt-6 grid gap-4 sm:grid-cols-2"><Field label="State"><input value={form.state} onChange={(e) => update("state", e.target.value)} placeholder="e.g. Lagos" className={input} /></Field><Field label="City or area"><input value={form.city} onChange={(e) => update("city", e.target.value)} placeholder="e.g. Yaba" className={input} /></Field><Field label="Preferred fuel type"><select value={form.preferredFuelType} onChange={(e) => update("preferredFuelType", e.target.value as FuelType)} className={input}>{fuels.map((fuel) => <option key={fuel}>{fuel}</option>)}</select></Field><Field label="Default search radius"><select value={form.defaultRadiusKm} onChange={(e) => update("defaultRadiusKm", Number(e.target.value))} className={input}>{[1, 2, 5, 10, 20, 30, 50].map((radius) => <option key={radius} value={radius}>{radius} km</option>)}</select></Field></div></section>
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6"><SectionTitle icon={<Car size={19} />} title="Primary vehicle" text="Optional. This helps FuelSmart start with the right fuel type." /><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Field label="Make"><input value={form.make} onChange={(e) => update("make", e.target.value)} placeholder="e.g. Toyota" className={input} /></Field><Field label="Model"><input value={form.model} onChange={(e) => update("model", e.target.value)} placeholder="e.g. Corolla" className={input} /></Field><Field label="Year"><input inputMode="numeric" value={form.year} onChange={(e) => update("year", e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 2021" className={input} /></Field><Field label="Fuel type"><select value={form.vehicleFuelType} onChange={(e) => update("vehicleFuelType", e.target.value as FuelType)} className={input}>{fuels.map((fuel) => <option key={fuel}>{fuel}</option>)}</select></Field><Field label="Plate number or nickname"><input value={form.plateNumber} onChange={(e) => update("plateNumber", e.target.value)} placeholder="Optional" className={input} /></Field></div></section>
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6"><SectionTitle icon={<Bell size={19} />} title="Preferences" text="We will only use these when notifications are enabled in a future release." /><div className="mt-5 space-y-3"><Toggle checked={form.stationUpdates} onChange={(value) => update("stationUpdates", value)} title="Station updates" text="Availability and price changes around your saved area." /><Toggle checked={form.communityUpdates} onChange={(value) => update("communityUpdates", value)} title="Community updates" text="Updates about reports you have submitted." /></div></section>
+          <button disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 disabled:opacity-60"><Save size={17} />{saving ? "Saving…" : "Save settings"}</button>
+        </form>
+        <div className="grid gap-6 lg:grid-cols-2"><section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6"><SectionTitle icon={<CheckCircle2 size={19} />} title="Your contribution" text={`${user?.reportsSubmitted || 0} community report${user?.reportsSubmitted === 1 ? "" : "s"} submitted. Reports remain visible even if you deactivate your account.`} /></section><section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6"><SectionTitle icon={<LockKeyhole size={19} />} title="Security" text="Update your password only when you need to." />{!showPasswordForm ? <button type="button" onClick={() => setShowPasswordForm(true)} className="mt-5 rounded-xl border border-emerald-500/40 px-4 py-2.5 text-sm font-bold text-emerald-300 hover:bg-emerald-500/10">Change password</button> : <form onSubmit={changePassword} className="mt-5 space-y-3"><div className="flex items-center justify-between"><p className="text-sm font-bold">Set a new password</p><button type="button" onClick={() => setShowPasswordForm(false)} aria-label="Close password form" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800"><X size={16} /></button></div><input aria-label="Current password" type="password" required value={passwords.currentPassword} onChange={(e) => setPasswords((current) => ({ ...current, currentPassword: e.target.value }))} placeholder="Current password" className={input} /><input aria-label="New password" type="password" required minLength={8} value={passwords.newPassword} onChange={(e) => setPasswords((current) => ({ ...current, newPassword: e.target.value }))} placeholder="New password (at least 8 characters)" className={input} /><input aria-label="Confirm new password" type="password" required minLength={8} value={passwords.confirmPassword} onChange={(e) => setPasswords((current) => ({ ...current, confirmPassword: e.target.value }))} placeholder="Confirm new password" className={input} /><button disabled={changingPassword} className="rounded-xl border border-emerald-500/40 px-4 py-2.5 text-sm font-bold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-60">{changingPassword ? "Updating…" : "Save new password"}</button></form>}</section></div>
+        <section className="rounded-3xl border border-red-500/30 bg-red-500/5 p-6"><SectionTitle icon={<ShieldAlert size={19} />} title="Deactivate account" text="For your security, we will email a code to your verified address before deactivating the account." />{!deactivationOpen ? <button onClick={requestDeactivationCode} disabled={deactivationBusy} className="mt-5 rounded-xl border border-red-500/50 px-4 py-2.5 text-sm font-bold text-red-200 hover:bg-red-500/10 disabled:opacity-60">{deactivationBusy ? "Sending code…" : "Deactivate my account"}</button> : <form onSubmit={deactivate} className="mt-5 max-w-md space-y-3"><Field label="Verification code"><input required inputMode="numeric" maxLength={6} value={deactivationCode} onChange={(event) => setDeactivationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit code" className={input} /></Field><div className="flex flex-wrap gap-3"><button disabled={deactivationBusy} className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">{deactivationBusy ? "Verifying…" : "Verify and deactivate"}</button><button type="button" onClick={requestDeactivationCode} disabled={deactivationBusy} className="rounded-xl border border-red-500/50 px-4 py-2.5 text-sm font-bold text-red-200 disabled:opacity-60">Resend code</button></div></form>}</section>
+      </>}
+    </div></main>
+  </div>;
 }
 
-// Helper Components
-function StatCard({ label, value, trend, positive, icon }: { label: string; value: string; trend: string; positive?: boolean; icon: React.ReactNode }) {
-  return (
-    <div className="bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl backdrop-blur-md space-y-2 relative overflow-hidden">
-      <div className="flex justify-between items-center text-slate-400">
-        <span className="text-[10px] font-mono uppercase tracking-wider">{label}</span>
-        {icon}
-      </div>
-      <p className="text-xl font-black text-white tracking-tight">{value}</p>
-      <p className={`text-[10px] font-semibold ${positive ? "text-emerald-400" : "text-slate-400"}`}>{trend}</p>
-    </div>
-  );
-}
-
-function SpecBox({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <div className="p-3.5 bg-slate-950/50 border border-slate-800 rounded-xl space-y-0.5">
-      <p className="text-[10px] font-mono text-slate-400 uppercase">{label}</p>
-      <p className="text-xs font-bold text-white">{value}</p>
-      <p className="text-[10px] text-slate-500">{sub}</p>
-    </div>
-  );
-}
-
-function ActionButton({ icon, label, primary }: { icon: React.ReactNode; label: string; primary?: boolean }) {
-  return (
-    <button className={`p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-      primary 
-        ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20" 
-        : "bg-slate-950 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700"
-    }`}>
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-}
-
-function SettingField({ label, value, verified }: { label: string; value: string; verified?: boolean }) {
-  return (
-    <div className="p-3.5 bg-slate-950/50 border border-slate-800 rounded-xl space-y-1">
-      <p className="text-[10px] font-mono text-slate-400 uppercase">{label}</p>
-      <p className="text-xs font-bold text-white flex items-center justify-between">
-        {value}
-        {verified && <CheckCircle2 size={14} className="text-emerald-400" />}
-      </p>
-    </div>
-  );
-}
-
-function SettingToggle({ label, defaultChecked }: { label: string; defaultChecked?: boolean }) {
-  return (
-    <div className="flex items-center justify-between p-3 bg-slate-950/30 rounded-xl border border-slate-800/60">
-      <span className="text-xs font-medium text-slate-300">{label}</span>
-      <input type="checkbox" defaultChecked={defaultChecked} className="accent-emerald-500 w-4 h-4 cursor-pointer" />
-    </div>
-  );
-}
+function ProfileSummary({ user }: { user: SettingsUser }) { const place = [user.city, user.state].filter(Boolean).join(", "); const vehicle = [user.vehicle?.make, user.vehicle?.model].filter(Boolean).join(" "); const initials = (user.fullName || user.username).split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase(); return <section className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-slate-900 to-slate-950 p-6"><div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" /><div className="relative flex flex-col gap-5 sm:flex-row sm:items-center"><div className="grid h-20 w-20 shrink-0 place-items-center rounded-3xl bg-emerald-500 text-2xl font-black text-slate-950">{initials}</div><div className="min-w-0 flex-1"><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">My profile</p><h2 className="mt-1 truncate text-2xl font-black">{user.fullName || "Complete your profile"}</h2><p className="mt-1 flex flex-wrap gap-x-2 text-sm text-slate-300"><span>@{user.username}</span><span>{user.email}</span></p><div className="mt-3 flex flex-wrap gap-2 text-xs">{place && <span className="rounded-full bg-white/10 px-3 py-1.5 text-slate-200">{place}</span>}{vehicle && <span className="rounded-full bg-white/10 px-3 py-1.5 text-slate-200">{vehicle}{user.vehicle?.year ? ` · ${user.vehicle.year}` : ""}</span>}<span className="rounded-full bg-white/10 px-3 py-1.5 text-slate-200">{user.reportsSubmitted || 0} reports</span></div></div></div></section>; }
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="text-sm font-bold text-slate-200">{label}</span>{children}</label>; }
+function SectionTitle({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) { return <div className="flex gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-emerald-400">{icon}</span><div><h2 className="font-black text-white">{title}</h2><p className="mt-1 text-sm text-slate-400">{text}</p></div></div>; }
+function Toggle({ checked, onChange, title, text }: { checked: boolean; onChange: (value: boolean) => void; title: string; text: string }) { return <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4"><span><span className="block text-sm font-bold text-white">{title}</span><span className="mt-1 block text-xs text-slate-400">{text}</span></span><input aria-label={title} type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-5 w-5 accent-emerald-500" /></label>; }

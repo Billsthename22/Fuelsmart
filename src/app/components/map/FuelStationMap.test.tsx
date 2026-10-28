@@ -2,11 +2,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StationSummary } from "@/app/lib/stations";
 import FuelStationMap from "./FuelStationMap";
-import NearbyMapStationList from "./NearbyMapStationList";
 import StationDetailsPanel from "./StationDetailsPanel";
 
 const load = vi.fn().mockResolvedValue(undefined);
-const routeMock = vi.fn();
+const computeRoutesMock = vi.fn();
+const createPolylinesMock = vi.fn();
+const markerOptions: Array<Record<string, unknown>> = [];
 vi.mock("@googlemaps/js-api-loader", () => ({ Loader: class { load = load; } }));
 
 const station: StationSummary = {
@@ -29,54 +30,67 @@ const fartherStation: StationSummary = {
 
 describe("registered station map", () => {
   beforeEach(() => {
-    routeMock.mockImplementation((_request, callback) => callback({ routes: [] }, "OK"));
+    computeRoutesMock.mockResolvedValue({ routes: [] });
+    createPolylinesMock.mockReturnValue([{ setMap: vi.fn() }]);
+    markerOptions.length = 0;
     Object.assign(globalThis, { google: { maps: {
-      Map: class { setCenter = vi.fn(); setZoom = vi.fn(); panTo = vi.fn(); fitBounds = vi.fn(); },
+      Map: class { setCenter = vi.fn(); setZoom = vi.fn(); panTo = vi.fn(); fitBounds = vi.fn(); addListener = vi.fn(); },
       LatLngBounds: class { extend = vi.fn(); isEmpty = () => false; },
-      DirectionsRenderer: class { setDirections = vi.fn(); setMap = vi.fn(); },
-      DirectionsService: class { route = routeMock; },
-      TravelMode: { DRIVING: "DRIVING" },
-      marker: { AdvancedMarkerElement: class { map: unknown; position: unknown; addListener = vi.fn(); constructor(value: object) { Object.assign(this, value); } } },
+      Circle: class { setMap = vi.fn(); },
+      TravelMode: { DRIVING: "DRIVING", WALKING: "WALKING" },
+      importLibrary: vi.fn().mockResolvedValue({ Route: { computeRoutes: computeRoutesMock } }),
+      marker: { AdvancedMarkerElement: class { map: unknown; position: unknown; content: unknown; addListener = vi.fn(); constructor(value: Record<string, unknown>) { markerOptions.push(value); Object.assign(this, value); } } },
     } } });
     vi.clearAllMocks();
   });
 
   it("shows a useful message when the Google Maps key is missing", () => {
-    render(<FuelStationMap apiKey="" stations={[station]} selectedStationId="station-1" userLocation={null} onSelect={vi.fn()} />);
+    render(<FuelStationMap apiKey="" stations={[station]} selectedStationId="station-1" userLocation={null} radiusKm={8} onSelect={vi.fn()} onClearSelection={vi.fn()} />);
     expect(screen.getByText(/Google Maps is not configured/i)).toBeInTheDocument();
   });
 
   it("shows a retryable station API error", () => {
     const retry = vi.fn();
-    render(<FuelStationMap apiKey="key" stations={[]} selectedStationId={null} userLocation={null} onSelect={vi.fn()} error="Could not load stations" onRetry={retry} />);
+    render(<FuelStationMap apiKey="key" stations={[]} selectedStationId={null} userLocation={null} radiusKm={8} onSelect={vi.fn()} onClearSelection={vi.fn()} error="Could not load stations" onRetry={retry} />);
     expect(screen.getByText("Could not load stations")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(retry).toHaveBeenCalledOnce();
   });
 
-  it("shows nearby stations without requiring a search and selects one", () => {
-    const select = vi.fn();
-    render(<NearbyMapStationList stations={[station, fartherStation]} selectedStationId="station-1" onSelect={select} />);
-    expect(screen.getByText("2 stations near you")).toBeInTheDocument();
-    expect(screen.getByText(/Mobil — Wilmer/i)).toBeInTheDocument();
-    expect(screen.getByText("Unverified")).toBeInTheDocument();
-    expect(screen.getByText("Prices unavailable")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /TotalEnergies/i }));
-    expect(select).toHaveBeenCalledWith("station-2");
+  it("keeps the full map clear until a station is selected", async () => {
+    render(<FuelStationMap apiKey="key" stations={[station, fartherStation]} selectedStationId={null} userLocation={{ lat: 6.45, lng: 3.39 }} radiusKm={8} onSelect={vi.fn()} onClearSelection={vi.fn()} />);
+    await waitFor(() => expect(load).toHaveBeenCalled());
+    expect(screen.queryByText(/Mobil — Wilmer/i)).not.toBeInTheDocument();
   });
 
   it("shows the selected real station and builds its external navigation URL", () => {
-    render(<StationDetailsPanel station={station} onDirections={vi.fn()} directionsAvailable={false} />);
+    render(<StationDetailsPanel station={station} userLocation={null} travelMode="driving" onTravelModeChange={vi.fn()} onDirections={vi.fn()} onClose={vi.fn()} directionsAvailable={false} routeSummary={null} routing={false} />);
     expect(screen.getByText(/Mobil — Wilmer/i)).toBeInTheDocument();
     expect(screen.getByText(/₦950/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /choose your location/i })).toBeDisabled();
-    expect(screen.getByRole("link", { name: /open Google Maps/i })).toHaveAttribute("href", "https://www.google.com/maps/dir/?api=1&destination=6.47%2C3.36");
+    expect(screen.getByRole("button", { name: /drive/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /walk/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open Google Maps/i })).toHaveAttribute("href", "https://www.google.com/maps/dir/?api=1&destination=6.47%2C3.36&travelmode=driving&dir_action=navigate");
   });
 
-  it("requests driving directions from the user to the selected station", async () => {
-    render(<FuelStationMap apiKey="key" stations={[station]} selectedStationId="station-1" userLocation={{ lat: 6.45, lng: 3.39 }} onSelect={vi.fn()} />);
+  it("uses a compact right-side station card on desktop", async () => {
+    render(<FuelStationMap apiKey="key" stations={[station]} selectedStationId="station-1" userLocation={{ lat: 6.45, lng: 3.39 }} radiusKm={8} onSelect={vi.fn()} onClearSelection={vi.fn()} />);
     await waitFor(() => expect(load).toHaveBeenCalled());
-    fireEvent.click(await screen.findByRole("button", { name: /get directions/i }));
-    expect(routeMock).toHaveBeenCalledWith(expect.objectContaining({ origin: { lat: 6.45, lng: 3.39 }, destination: { lat: 6.47, lng: 3.36 }, travelMode: "DRIVING" }), expect.any(Function));
+    expect(screen.getByTestId("station-details-positioner")).toHaveClass("lg:top-24", "lg:bottom-auto", "lg:w-[390px]");
+  });
+
+  it("requests the shortest driving route from the user to the selected station", async () => {
+    computeRoutesMock.mockResolvedValue({ routes: [{ distanceMeters: 1_250, durationMillis: 360_000, viewport: {}, createPolylines: createPolylinesMock }] });
+    render(<FuelStationMap apiKey="key" stations={[station]} selectedStationId="station-1" userLocation={{ lat: 6.45, lng: 3.39 }} radiusKm={8} onSelect={vi.fn()} onClearSelection={vi.fn()} />);
+    await waitFor(() => expect(load).toHaveBeenCalled());
+    fireEvent.click(await screen.findByRole("button", { name: /show shortest route/i }));
+    await waitFor(() => expect(computeRoutesMock).toHaveBeenCalledWith(expect.objectContaining({
+      origin: { lat: 6.45, lng: 3.39 },
+      destination: { lat: 6.47, lng: 3.36 },
+      travelMode: "DRIVING",
+      requestedReferenceRoutes: ["SHORTER_DISTANCE"],
+    })));
+    await waitFor(() => expect(createPolylinesMock).toHaveBeenCalledWith({ polylineOptions: expect.objectContaining({ strokeColor: "#2563eb", strokeWeight: 8 }) }));
+    expect(markerOptions.some((options) => options.title === "Your driving progress")).toBe(true);
   });
 });

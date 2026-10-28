@@ -12,9 +12,13 @@ describe("authentication entry helpers", () => {
   });
 
   it("validates normal-user signup fields and confirmation", () => {
-    expect(validateSignup({ username: "driver", email: "bad", password: "password", confirmation: "password" })).toBe("Enter a valid email address.");
-    expect(validateSignup({ username: "driver", email: "driver@example.com", password: "short", confirmation: "short" })).toBe("Password must contain at least 8 characters.");
-    expect(validateSignup({ username: "driver", email: "driver@example.com", password: "password", confirmation: "different" })).toBe("Passwords do not match.");
-    expect(validateSignup({ username: "driver", email: "driver@example.com", password: "password", confirmation: "password" })).toBeNull();
+    expect(validateSignup({ fullName: "Ada Okafor", username: "driver", email: "bad", password: "password", confirmation: "password" })).toBe("Enter a valid email address.");
+    expect(validateSignup({ fullName: "Ada Okafor", username: "driver", email: "driver@example.com", password: "short", confirmation: "short" })).toBe("Password must contain at least 8 characters.");
+    expect(validateSignup({ fullName: "Ada Okafor", username: "driver", email: "driver@example.com", password: "password", confirmation: "different" })).toBe("Passwords do not match.");
+    expect(validateSignup({ fullName: "Ada Okafor", username: "driver", email: "driver@example.com", password: "password", confirmation: "password" })).toBeNull();
+  });
+
+  it("requires a full name during normal-user signup", () => {
+    expect(validateSignup({ fullName: "", username: "driver", email: "driver@example.com", password: "password", confirmation: "password" })).toBe("Complete every field.");
   });
 });
